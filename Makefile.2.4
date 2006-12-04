@@ -1,0 +1,25 @@
+
+CC = gcc
+
+YOUR_RELEASE=/export/jhagen/linux-2.4.32/linux-2.4.32
+
+CFLAGS_KERN = -D__KERNEL__ -DMODULE  -Wall -Wstrict-prototypes -O2 -fomit-frame-pointer -fno-strict-aliasing -fno-common -Wno-unused -pipe -mpreferred-stack-boundary=2 -I. -I$(YOUR_RELEASE)/include
+
+si3097.o: module.o irup.o mmap.o ioctl.o  uart.o
+	ld -r -o si3097.o module.o irup.o mmap.o ioctl.o  uart.o
+
+module.o: module.c
+	gcc $(CFLAGS_KERN) -c -o module.o module.c
+
+irup.o: irup.c
+	gcc $(CFLAGS_KERN) -c -o irup.o irup.c
+
+mmap.o: mmap.c
+	gcc $(CFLAGS_KERN) -c -o mmap.o mmap.c
+
+ioctl.o: ioctl.c
+	gcc $(CFLAGS_KERN) -c -o ioctl.o ioctl.c
+
+uart.o: uart.c
+	gcc $(CFLAGS_KERN) -c -o uart.o uart.c
+
