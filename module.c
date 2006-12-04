@@ -50,7 +50,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
 MODULE_AUTHOR("Jeff Hagen, jhagen@as.arizona.edu Univ of Arizona, H-J. Meyer, Spectral Instruments");
-MODULE_DESCRIPTION("Driver for Spectral Instruments 3097 Camera Interface");
+MODULE_DESCRIPTION("Driver for Spectral Instruments 3097 Camera Interface"SI3097_VERSION);
 MODULE_LICENSE("GPL");
 
 
@@ -300,7 +300,7 @@ static int __init si_init_module(void)
     spin_lock_init( &si_devices->dma_lock );
 #else
 
-  printk("SI looking for card\n");
+  printk("SI looking for card, version %s\n", SI3097_VERSION );
   if(( cardcount = pci_register_driver( &si_driver )) <= 0 ) {
     pci_unregister_driver( &si_driver );
     cardcount = 0;

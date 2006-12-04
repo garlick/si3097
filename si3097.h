@@ -3,6 +3,8 @@
 
 /* this is to be included by the driver and application alike */
 
+#define SI3097_VERSION "1.0"
+
 #ifndef __KERNEL_
 
 #include <linux/types.h>
