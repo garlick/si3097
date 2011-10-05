@@ -80,7 +80,7 @@ static void pwindow_dest( GtkWidget *widget, gpointer   data )
 {
   struct SI_CAMERA *head;
 
-  head = (struct SU_APP *)data;
+  head = (struct SI_CAMERA *)data;
   head->param_window = NULL;
 }
 
@@ -88,7 +88,7 @@ static void cwindow_dest( GtkWidget *widget, gpointer   data )
 {
   struct SI_CAMERA *head;
 
-  head = (struct SU_APP *)data;
+  head = (struct SI_CAMERA *)data;
   head->control_window = NULL;
 }
 
@@ -98,7 +98,7 @@ void config_dma( GtkWidget *widget, gpointer   data )
   const char *s;
   int combo, nbufs;
 
-  head = (struct SU_APP *)data;
+  head = (struct SI_CAMERA *)data;
   printf("config dma\n");
 
   if( head->ptr ) {
@@ -172,7 +172,7 @@ static void config_image( GtkWidget *widget, gpointer data )
   int combo;
   GdkPixbuf *pix;
 
-  head = (struct SU_APP *)data;
+  head = (struct SI_CAMERA *)data;
 
   printf("config image\n");
   bzero( &head->dma_config, sizeof(struct SI_DMA_CONFIG ));

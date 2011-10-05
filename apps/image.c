@@ -377,7 +377,8 @@ int main( int argc, char *argv[] )
 
   gtk_init (&argc, &argv);
 
-  fd = open("/dev/si3097a", O_RDWR, 0 );
+ // fd = open("/dev/si3097a", O_RDWR, 0 );
+  fd = -1;
   head->fd = fd;
   if( fd >= 0 ) {
     load_camera_cfg( head, "Test.cfg" );
@@ -606,7 +607,7 @@ int n;
   }
   printf("max %d\n", max );
 
-  for( i=0; i<tot; i++ ) {
-     data[i] = (unsigned short)((double)data[i] / (double)max * 65535.0);
-  }
+//  for( i=0; i<tot; i++ ) {
+//     data[i] = (unsigned short)((double)data[i] / (double)max * 65535.0);
+//  }
 }

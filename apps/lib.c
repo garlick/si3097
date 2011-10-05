@@ -346,9 +346,9 @@ int *data;
   d = (int *)malloc( len );
   memcpy( d, data, len );
   for( i=0; i<n; i++ )
-    swapl(&data[i]);
+    swapl(&d[i]);
 
-  if( (i = write( fd, data, len )) != len )
+  if( (i = write( fd, d, len )) != len )
     return -1;
 
 //  memset( d, 0, len );
@@ -357,6 +357,7 @@ int *data;
 
 //  if( memcmp( d, data, len ) != 0 )
 //    return -1;
+  free(d);
 
   return len;
 }

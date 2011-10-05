@@ -3,7 +3,7 @@
 
 /* this is to be included by the driver and application alike */
 
-#define SI3097_VERSION "1.0"
+#define SI3097_VERSION "1.2"
 
 #ifndef __KERNEL_
 

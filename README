@@ -238,6 +238,31 @@ cat /proc/si3097
 SI 0000:05:00.0, major 254 minor 0 devfn 0 irq 209 isopen 0
 
 
+Module parameters:
+
+verbose 
+
+There are several initialization/module load parameters which can be set
+on module load.
+ 
+ defaults:
+ 
+ verbose = 0;
+ maxever  = 0
+ buflen = 1048576
+ timeout  = 5000
+ 
+ If maxever is set to non-zero then the driver allocates that amount 
+ of memory at load time for each card found. It does the equivalent of 
+ ioctl( fd, SI_IOCTL_DMA_INIT, &dma) using the buflen and timeout parameters.
+ 
+ On a running fragmented system, its possible for the contiguous 
+ memory allocation to fail. (I suppose if buflen is 8192, it would never have
+ a fragmentation problem.) This ensures the driver gets all the memory it 
+ needs at load time.  It also means you dont need to run something at load 
+ time to artificially allocate it. 
+ 
+
 Camera commands:
 
 The camera is controlled by the following commands. All characters sent to the 

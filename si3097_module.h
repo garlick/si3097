@@ -32,6 +32,7 @@ struct SIDEVICE {
   struct pci_dev *pci;     /* device found by kernel        */
   spinlock_t uart_lock;    /* protection for uart registers */
   spinlock_t dma_lock;     /* protection for dma registers  */
+  spinlock_t nopage_lock;  /* protection for nopage/mmap  */
   atomic_t isopen;         /* true when device is open      */
   int minor;
   __u32 bar[4];  /*  PCI bus address mappings */ 

@@ -4,7 +4,14 @@
 ## "makefile" when 'make modules' is run
 ########################################################
 
-LINUXBUILD=/lib/modules/2.6.9-1.667/build/
+#
+# copied /usr/src/redhat/SOURCES/kernel-2.6.9-i686-smp.config .config
+# added this line for SMP support
+#
+#	CFLAGS += -D__SMP__ -DSMP -DMODVERSIONS
+
+#LINUXBUILD=/lib/modules/2.6.9-1.667smp/build/
+LINUXBUILD=/lib/modules/`uname -r`/build/
 #LINUXBUILD=../../linux-2.6.16/
 
 obj-m   := si3097.o

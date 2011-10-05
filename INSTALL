@@ -1,6 +1,6 @@
 
 
-This is the first release of the 2.6 driver. It works under 2.6.9-1.667smp.
+This is the 2.6 driver. It works under 2.6.9-1.667smp.
 At one point it compiled under 2.4, but I never tried it so no promises.
 
 
@@ -20,7 +20,7 @@ make
 
 then as root:
 
-/sbin/insmod si3097.ko
+/sbin/insmod si3097.ko  verbose=1 maxever=33554432
 
 or for 4.2
 

@@ -50,8 +50,28 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
 MODULE_AUTHOR("Jeff Hagen, jhagen@as.arizona.edu Univ of Arizona, H-J. Meyer, Spectral Instruments");
-MODULE_DESCRIPTION("Driver for Spectral Instruments 3097 Camera Interface"SI3097_VERSION);
+MODULE_DESCRIPTION("Driver for Spectral Instruments 3097 Camera Interface");
 MODULE_LICENSE("GPL");
+
+
+/* module parameters */
+
+/*
+ if maxever is not zero on module load, 
+ configure memory based on buflen and maxever
+*/
+
+int buflen = 1048576;
+module_param( buflen, int,  0 ); 
+
+int maxever = 33554432; /* this is for lotis */
+module_param( maxever, int,  0 );
+
+int timeout = 5000;  /* default jiffies */
+module_param( timeout, int,  0 );
+
+int verbose = 1;
+module_param( verbose, int,  0 ); 
 
 
 static struct SIDEVICE *si_devices = NULL; /* list of cards */
@@ -218,6 +238,7 @@ const struct pci_device_id *id;
 
   spin_lock_init( &dev->uart_lock );
   spin_lock_init( &dev->dma_lock );
+  spin_lock_init( &dev->nopage_lock );
 
   init_waitqueue_head( &dev->dma_block );
   init_waitqueue_head( &dev->uart_wblock );
@@ -261,6 +282,28 @@ const struct pci_device_id *id;
 //  reg = PLX_REG_READ(dev, PCI9054_DMA0_MODE );
 //  printk("SI mode 0x%x\n", reg );
 
+
+/* assign verbose flag as module parameter */
+
+  dev->verbose = verbose;
+
+/* on init, configure memory if module parameter
+   maxever is non zero */
+
+
+  if( maxever > 0 )  {
+    if( buflen > maxever )
+      buflen = maxever;
+
+    printk( "SI initial load configuring memory to %d\n", maxever );
+    dev->dma_cfg.total = maxever;
+    dev->dma_cfg.buflen = buflen;
+    dev->dma_cfg.timeout = timeout;
+    dev->dma_cfg.maxever = maxever;
+    dev->dma_cfg.config = SI_DMA_CONFIG_WAKEUP_ONEND;
+    si_config_dma( dev );
+  }
+
   return(0);
 }
 
@@ -271,9 +314,13 @@ const struct pci_device_id *id;
 
 static int __init si_init_module(void)
 {
-  int result, cardcount;
+  int result, cardcount, wh;
+  struct SIDEVICE *dev;
+
 
   si_major = 0; /* let OS assign */
+
+
 
   spin_lock_init( &spin_multi_devs );
 
@@ -300,13 +347,24 @@ static int __init si_init_module(void)
     spin_lock_init( &si_devices->dma_lock );
 #else
 
-  printk("SI looking for card, version %s\n", SI3097_VERSION );
-  if(( cardcount = pci_register_driver( &si_driver )) <= 0 ) {
+  printk("SI looking for card\n");
+  pci_register_driver( &si_driver );
+
+  wh = 0;
+  dev = si_devices;
+  while( dev ) {
+    dev= dev->next;
+    wh++;
+  }
+
+  if( wh == 0 ) {
     pci_unregister_driver( &si_driver );
     cardcount = 0;
     printk("SI no cards found\n");
     return(-ENODEV);
   }
+
+  cardcount = wh;
 
 #endif
   si_major = 0;
@@ -423,9 +481,9 @@ int si_close(struct inode *inode, struct file *filp) /* close */
   atomic_dec(&dev->isopen);
 
   if( atomic_read(&dev->isopen) <= 0 ) {
-    if( si_wait_vmaclose( dev )) {
-      printk("SI last close, but vma is still open %d\n", minor );
-    }
+//    if( si_wait_vmaclose( dev )) {
+//      printk("SI last close, but vma is still open %d\n", minor );
+//    }
     si_stop_dma(dev, NULL );
   }
   
@@ -641,4 +699,5 @@ unsigned int si_poll(struct file *filp, poll_table *table)
   }
   return mask;
 }
+
 

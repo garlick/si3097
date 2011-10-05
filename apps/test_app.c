@@ -87,6 +87,7 @@ char *argv[];
   expect_y( c->fd );
 
   print_help();
+  //printf("WARNING initialization commented out\n");
 
   while(1) {
     printf("si3097> ");

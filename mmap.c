@@ -53,6 +53,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "si3097.h"
 #include "si3097_module.h"
 
+void *jeff_alloc( int size, dma_addr_t *pphy );
 
 /* use the vma mechanism for mapping data */
 
@@ -77,7 +78,8 @@ void si_vmaclose( struct vm_area_struct *area )
     printk("SI vmaclose vmact %d\n", atomic_read(&dev->vmact) );
   
   if( atomic_dec_and_test(&dev->vmact) )
-    wake_up_interruptible( &dev->mmap_block );
+    ;//wake_up_interruptible( &dev->mmap_block );
+
 }
 
 /* when the application faults this routine is called to map the data */
@@ -97,18 +99,24 @@ int *type;
   void *vaddr;
   struct SIDEVICE *dev;
   struct page *pg;
+  unsigned long flags;
+
 
   dev = (struct SIDEVICE *)vma->vm_file->private_data;
+  spin_lock_irqsave( &dev->nopage_lock, flags );
+
   off = address - vma->vm_start; /* vma->vm_offset byte offset, must be fixed */
 
   if( !dev ) {
     printk("SI nopage failed, off 0x%x\n", (unsigned int)off );
-    return(0);
+    spin_unlock_irqrestore( &dev->nopage_lock, flags );
+    return(NOPAGE_SIGBUS);
   }
 
   if( !dev->sgl ) {
     printk("SI nopage, sgl NULL\n");
-    return(0);
+    spin_unlock_irqrestore( &dev->nopage_lock, flags );
+    return(NOPAGE_SIGBUS);
   }
 
   nbuf = off/dev->alloc_sm_buflen;
@@ -116,13 +124,19 @@ int *type;
   if( nbuf >= dev->dma_nbuf ) {
     printk("SI nopage, requested more mmap than data: nbuf %d max %d\n", 
       nbuf, dev->dma_nbuf );
-    return(0);
+    spin_unlock_irqrestore( &dev->nopage_lock, flags );
+    return(NOPAGE_SIGBUS);
   }
   
   vaddr = ((unsigned char *)dev->sgl[nbuf].cpu) + loff;
 
   pg = virt_to_page( vaddr );
-//  get_page( pg ); no need: SetPageReserved
+  get_page( pg ); 
+  spin_unlock_irqrestore( &dev->nopage_lock, flags );
+
+  if( type )
+    *type = VM_FAULT_MINOR;
+
   return( pg );
 }
 
@@ -179,6 +193,9 @@ struct SIDEVICE *dev;
   if( cmd_stat & 1 )
     si_stop_dma(dev, NULL );
 
+  printk("si_config_dma alloc_maxever %d alloc_buflen %d\n", 
+    dev->alloc_maxever, dev->alloc_buflen );
+
   if( dev->alloc_maxever == 0 ) { /* allocate the memory */
     if( dev->dma_cfg.total <= 0 ) {
       printk("SI config.total %d\n", dev->dma_cfg.total ); 
@@ -194,6 +211,8 @@ struct SIDEVICE *dev;
   } else {
     isalloc = 0;
   }
+  printk("si_config_dma2 alloc_maxever %d alloc_buflen %d\n", 
+    dev->alloc_maxever, dev->alloc_buflen );
 
   if( dev->dma_cfg.maxever > dev->alloc_maxever ) {
     printk("SI config need to freemem, maxever: asked for %d have %d\n",
@@ -327,13 +346,15 @@ struct SIDEVICE *dev;
   sm_buflen = dev->alloc_sm_buflen;
   local_addr = SI_LOCAL_BUSADDR;
 
-  spin_lock_irqsave( &dev->dma_lock, flags );
   dev->sgl_len = nbuf * sizeof(struct SIDMA_SGL);
   dev->sgl = pci_alloc_consistent( dev->pci, dev->sgl_len, &dev->sgl_pci); 
+//  dev->sgl = jeff_alloc( dev->sgl_len, &dev->sgl_pci); 
+
+//  spin_lock_irqsave( &dev->dma_lock, flags );
 
   if( !dev->sgl ) {
     printk( "SI no memory allocating table\n"); 
-    spin_unlock_irqrestore( &dev->dma_lock, flags );
+//    spin_unlock_irqrestore( &dev->dma_lock, flags );
     return -EIO;
   }
   memset(dev->sgl, 0, dev->sgl_len); /* clear so cpu will be null if fail */
@@ -344,17 +365,20 @@ struct SIDEVICE *dev;
   for( nb=nbuf-1; nb>=0; nb-- ) {
 
     cpu = pci_alloc_consistent( dev->pci, sm_buflen, &dma_buf ); 
+    //cpu = jeff_alloc( sm_buflen, &dma_buf ); 
     if( !cpu ) {
       printk( "SI no memory allocating buffer %d\n", nbuf - nb); 
-      spin_unlock_irqrestore( &dev->dma_lock, flags );
+//      spin_unlock_irqrestore( &dev->dma_lock, flags );
       si_free_sgl(dev);   
       return -EIO;
     }
 
+//   if I am already doing the pci_alloc_consistent, why do I need this 
     pend = virt_to_page(cpu + buflen-1);
     page = virt_to_page(cpu);
     while( page <= pend ) {
       SetPageReserved(page);
+      get_page(page); /* doit once too many so it sticks */
       page++;
     }
 
@@ -371,7 +395,7 @@ struct SIDEVICE *dev;
     memset( cpu, setb, sm_buflen );
 
   }
-  spin_unlock_irqrestore( &dev->dma_lock, flags );
+//  spin_unlock_irqrestore( &dev->dma_lock, flags );
 
   if( dev->verbose )
     printk("SI si_alloc_memory, %d allocates and %d bytes\n",
@@ -388,6 +412,8 @@ struct SIDEVICE *dev;
 
   if( !dev->sgl )
    return;
+
+  printk("si_print_memtable nbuf %d\n",  dev->dma_nbuf );
 
   printk("SI   ch          padr       ladr       siz        dpr        cpu\n" );
   for( nb=0; nb< dev->dma_nbuf; nb++ ) {
@@ -437,14 +463,17 @@ struct SIDEVICE *dev;
     ch = &dchain[n];
     if( !ch->cpu )
       break;
+
 /* does free_consist do this */
 
     pend = virt_to_page(ch->cpu + sm_buflen-1);
     page = virt_to_page(ch->cpu);
     while( page <= pend ) {
       ClearPageReserved(page);
-        page++;
+      put_page_testzero(page);
+      page++;
     }
+
     pci_free_consistent( dev->pci, sm_buflen, 
       (void *)ch->cpu, ch->padr );
     total_frees++;
@@ -685,11 +714,11 @@ struct SIDEVICE *dev;
 
   tmout = VMACLOSE_TIMEOUT;
 
-//  printk("si_wait_vmaclose waiting\n");
+  printk("si_wait_vmaclose waiting\n");
   wait_event_interruptible_timeout( dev->mmap_block, 
     (atomic_read(&dev->vmact)==0), tmout );
 
-//  printk("si_wait_vmaclose wakeup\n");
+  printk("si_wait_vmaclose wakeup\n");
   if( atomic_read(&dev->vmact) > 0 ) {
     if( dev->verbose )
       printk("si_wait_vmaclose timeout\n");
@@ -738,3 +767,42 @@ struct SIDEVICE *dev;
 }
 
 
+void *jeff_alloc( size, pphy )
+int size;
+dma_addr_t *pphy;
+{
+  unsigned char *km;
+//  unsigned int phy, phy_ix;
+//  int count;
+  int order;
+
+  order  = get_order( size );
+  printk("order %d\n", order );
+  if( !( km = (unsigned char *)__get_free_pages( GFP_KERNEL, order )) ) {
+    printk("SI TEST get_free_pages no memory\n");
+    return NULL;
+  } else {
+    //int i;
+    
+   memset( km, 0, size );
+
+  if( pphy )
+    *pphy = (dma_addr_t) virt_to_phys( km );
+
+//    count = 0;
+    
+//    for( i=0; i<TEST_SIZE; i+=8192 ) {
+//       phy_ix = (unsigned int)virt_to_phys( km+i );
+//       if( phy_ix != (phy + i ))
+//         count++;
+//    }
+//    if( count == 0 )
+//      printk("SI TEST worked count %d\n", count );
+//    else
+//      printk("SI TEST failed count %d\n", count );
+//    
+//    free_pages((unsigned long)km, order);
+  
+    return (void *)km;
+  }
+}
