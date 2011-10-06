@@ -52,11 +52,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
  /* si_ioctl:  Processes the IOCTL messages sent to this device */
 
-int si_ioctl( inode, filp, cmd, args )
-struct inode  *inode;
-struct file   *filp;
-unsigned int   cmd;
-unsigned long  args;
+long si_ioctl( struct file *filp, unsigned int cmd, unsigned long  args )
 {
   int ret;
   struct SI_DMA_STATUS   dma_status;

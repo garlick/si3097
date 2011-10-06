@@ -10,9 +10,8 @@
 #
 #	CFLAGS += -D__SMP__ -DSMP -DMODVERSIONS
 
-#LINUXBUILD=/lib/modules/2.6.9-1.667smp/build/
+#LINUXBUILD=/export/jhagen/kernel/linux-2.6.37.6
 LINUXBUILD=/lib/modules/`uname -r`/build/
-#LINUXBUILD=../../linux-2.6.16/
 
 obj-m   := si3097.o
 

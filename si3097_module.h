@@ -342,7 +342,7 @@ struct page *si_vmanopage( struct vm_area_struct *, unsigned long, int * );
 
 int si_config_dma( struct SIDEVICE *);
 void si_free_sgl( struct SIDEVICE *dev );
-int si_ioctl( struct inode *, struct file *, unsigned int, unsigned long );
+long si_ioctl( struct file *, unsigned int, unsigned long );
 
 int si_start_dma(struct SIDEVICE *);
 int si_stop_dma( struct SIDEVICE *, struct SI_DMA_STATUS *);
@@ -357,7 +357,6 @@ ssize_t si_write(struct file *, const char __user *, size_t , loff_t *);
 unsigned int si_poll( struct file *, poll_table *);
 
 int si_mmap( struct file *filp, struct vm_area_struct *vma);
-int si_ioctl( struct inode  *, struct file *, unsigned int, unsigned long );
 int si_uart_more_to_write( struct SIDEVICE * );
 int si_dma_wakeup( struct SIDEVICE * );
 int si_uart_read_ready( struct SIDEVICE * );
