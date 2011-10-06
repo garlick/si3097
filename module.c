@@ -26,7 +26,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
 
 #include <linux/module.h>
-#include <linux/sched.h>
 #include <linux/interrupt.h>
 
 #define wait_event_interruptible_timeout( a, b, c )\
@@ -34,6 +33,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #else
 
+#include <linux/sched.h>
 #include <linux/module.h>
 #include <linux/interrupt.h>
 #include <linux/workqueue.h>
@@ -183,11 +183,13 @@ const struct pci_device_id *id;
 
   dev->minor = wh;
  
-  pci_enable_device( pci );
+  if( (error = pci_enable_device( pci )) < 0 )
+    return error;
 
   dev->pci = pci;
   pci_read_config_byte(dev->pci, PCI_INTERRUPT_LINE, &irup);
-  pci_request_regions( dev->pci, "SI3097");
+  if( (error = pci_request_regions( dev->pci, "SI3097")) < 0 )
+    return error;
      
   for ( i=0; i<4; i++ ) {
     len = pci_resource_len(pci,i);
@@ -209,7 +211,7 @@ const struct pci_device_id *id;
 
   if( pci->irq ) {
     if((error = request_irq( 
-       pci->irq, (void *)si_interrupt, SA_INTERRUPT|SA_SHIRQ, "SI", dev))){
+       pci->irq, (void *)si_interrupt, IRQF_SHARED, "SI", dev))){
        printk( "SI %s failed to get irq %d error %d\n", pci_name(pci),
             pci->irq, error);
        printk( "SI skipping device\n");
@@ -232,7 +234,7 @@ const struct pci_device_id *id;
 #else
 
   dev->bottom_half_wq = create_workqueue("SI3097");
-  INIT_WORK( &dev->task, si_bottom_half, dev );
+  INIT_WORK( &dev->task, si_bottom_half );
 
 #endif
 
@@ -348,7 +350,8 @@ static int __init si_init_module(void)
 #else
 
   printk("SI looking for card\n");
-  pci_register_driver( &si_driver );
+  if( pci_register_driver( &si_driver ) < 0 )
+    return -EIO;
 
   wh = 0;
   dev = si_devices;

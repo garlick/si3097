@@ -320,7 +320,7 @@ struct SIDMA_SGL {
 
 // Function prototypes
 
-irqreturn_t si_interrupt( int, struct SIDEVICE *, struct pt_regs *);
+irqreturn_t si_interrupt( int irq, struct SIDEVICE *dev );
 int si_set_serial_params(struct SIDEVICE *, struct SI_SERIAL_PARAM *);
 int si_init_uart(struct SIDEVICE *);
 void si_cleanup_serial(struct SIDEVICE *);
@@ -364,7 +364,7 @@ int si_uart_read_ready( struct SIDEVICE * );
 int si_uart_tx_empty( struct SIDEVICE * );
 void si_uart_clear( struct SIDEVICE * );
 void si_get_serial_params(struct SIDEVICE *, struct SI_SERIAL_PARAM *);
-void si_bottom_half( void *inp );
+void si_bottom_half( struct work_struct *work );
 int si_wait_vmaclose( struct SIDEVICE *);
 int si_alloc_memory( struct SIDEVICE *dev );
 void si_print_memtable( struct SIDEVICE *dev );

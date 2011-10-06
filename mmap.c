@@ -31,7 +31,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
 
 #include <linux/module.h>
-#include <linux/sched.h>
 #include <linux/interrupt.h>
 
 #define wait_event_interruptible_timeout( a, b, c )\
@@ -43,6 +42,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <linux/interrupt.h>
 #endif
 
+#include <linux/sched.h>
 #include <linux/proc_fs.h>
 #include <linux/poll.h>
 #include <linux/pci.h>
@@ -85,65 +85,55 @@ void si_vmaclose( struct vm_area_struct *area )
 /* when the application faults this routine is called to map the data */
 
 
-struct page *si_vmanopage( vma, address, type )
-struct vm_area_struct *vma;
-unsigned long address;
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
-int type;
-#else
-int *type;
-#endif
+int si_vmafault( struct vm_area_struct *vma, struct vm_fault *vmf )
 {
   unsigned int loff, off;
   int nbuf;
   void *vaddr;
   struct SIDEVICE *dev;
-  struct page *pg;
+//  struct page *pg;
   unsigned long flags;
 
-
   dev = (struct SIDEVICE *)vma->vm_file->private_data;
-  spin_lock_irqsave( &dev->nopage_lock, flags );
 
-  off = address - vma->vm_start; /* vma->vm_offset byte offset, must be fixed */
 
   if( !dev ) {
-    printk("SI nopage failed, off 0x%x\n", (unsigned int)off );
-    spin_unlock_irqrestore( &dev->nopage_lock, flags );
-    return(NOPAGE_SIGBUS);
+    printk("SI fault failed, dev NULL\n" );
+    return(VM_FAULT_SIGBUS);
   }
 
   if( !dev->sgl ) {
-    printk("SI nopage, sgl NULL\n");
-    spin_unlock_irqrestore( &dev->nopage_lock, flags );
-    return(NOPAGE_SIGBUS);
+    printk("SI fault, sgl NULL\n");
+    return(VM_FAULT_SIGBUS);
   }
+
+  spin_lock_irqsave( &dev->nopage_lock, flags );
+
+//  off = vmf->virtual_address - vma->vm_start; /* vma->vm_offset byte offset, must be fixed */
+  off = (vmf->pgoff << PAGE_SHIFT);
 
   nbuf = off/dev->alloc_sm_buflen;
   loff = off % dev->alloc_sm_buflen;
   if( nbuf >= dev->dma_nbuf ) {
-    printk("SI nopage, requested more mmap than data: nbuf %d max %d\n", 
+    printk("SI fault, requested more mmap than data: nbuf %d max %d\n", 
       nbuf, dev->dma_nbuf );
     spin_unlock_irqrestore( &dev->nopage_lock, flags );
-    return(NOPAGE_SIGBUS);
+    return(VM_FAULT_SIGBUS);
   }
   
   vaddr = ((unsigned char *)dev->sgl[nbuf].cpu) + loff;
 
-  pg = virt_to_page( vaddr );
-  get_page( pg ); 
+  vmf->page = virt_to_page( vaddr );
+  get_page( vmf->page ); 
   spin_unlock_irqrestore( &dev->nopage_lock, flags );
 
-  if( type )
-    *type = VM_FAULT_MINOR;
-
-  return( pg );
+  return( 0 );
 }
 
 static struct vm_operations_struct si_vm_ops = {
   .open  = si_vmaopen, 
   .close = si_vmaclose, 
-  .nopage = si_vmanopage
+  .fault = si_vmafault
 };
 
 int si_mmap(filp, vma )
@@ -318,7 +308,6 @@ struct SIDEVICE *dev;
   int nbuf, buflen, sm_buflen, nb;
   struct SIDMA_SGL *ch;
   void *cpu;
-  unsigned long flags;
   struct page *page, *pend;
   dma_addr_t ch_dma, dma_buf;
   __u32 local_addr;

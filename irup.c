@@ -28,7 +28,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
 
 #include <linux/module.h>
-#include <linux/sched.h>
 #include <linux/interrupt.h>
 
 #define wait_event_interruptible_timeout( a, b, c )\
@@ -36,6 +35,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #else
 
+#include <linux/sched.h>
 #include <linux/module.h>
 #include <linux/interrupt.h>
 #include <linux/workqueue.h>
@@ -53,10 +53,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
   The Interrupt Service Routine for the PLX chip on the SI camera controller
  */
 
-irqreturn_t si_interrupt( irq, dev, regs )
-int irq;
-struct SIDEVICE *dev;
-struct pt_regs *regs;
+irqreturn_t si_interrupt( int irq, struct SIDEVICE *dev )
 {
   __u32 reg;
   __u32 ctrl_stat;
@@ -136,7 +133,7 @@ struct pt_regs *regs;
   // Schedule bottom half to complete interrupt processing
   // Reset task structure
 
-  PREPARE_WORK( &dev->task, si_bottom_half, dev );
+  PREPARE_WORK( &dev->task, si_bottom_half );
 
   dev->source = source; // pass to bottom half
 
@@ -163,7 +160,7 @@ struct pt_regs *regs;
 /* This routine is scheduled by the ISR to efficiently serivce the
    interrupt  */
 
-void si_bottom_half( void *inp )
+void si_bottom_half( struct work_struct *work )
 {
   __u32 int_stat;
   __u32 reg;
@@ -173,7 +170,7 @@ void si_bottom_half( void *inp )
   int i, done;
   unsigned long flags;
 
-  dev = (struct SIDEVICE *)inp;
+  dev = container_of( work, struct SIDEVICE, task);
   int_stat = PLX_REG_READ( dev, PCI9054_INT_CTRL_STAT );
 
     // Copy interrupt source
