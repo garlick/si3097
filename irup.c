@@ -119,7 +119,7 @@ irqreturn_t si_interrupt( int irq, struct SIDEVICE *dev )
   // Schedule bottom half to complete interrupt processing
   // Reset task structure
 
-  PREPARE_WORK( &dev->task, si_bottom_half );
+  //PREPARE_WORK( &dev->task, si_bottom_half );
 
   dev->source = source; // pass to bottom half
 
