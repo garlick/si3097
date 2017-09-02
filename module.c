@@ -144,8 +144,8 @@ const struct pci_device_id *id;
     wh++;
   }
 
-  if( !pci_dma_supported( pci, 0xffffffff ) ) {
-    printk("SI pci_dma_supported failed\n");
+  if(pci_set_dma_mask( pci, 0xffffffff ) != 0) {
+    printk("SI pci_set_dma_mask failed\n");
     return(-EIO);
   }
 
