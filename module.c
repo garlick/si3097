@@ -27,6 +27,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <linux/interrupt.h>
 #include <linux/workqueue.h>
 #include <linux/proc_fs.h>
+#include <linux/seq_file.h>
 #include <linux/poll.h>
 #include <linux/pci.h>
 #include <linux/delay.h>
@@ -80,35 +81,43 @@ MODULE_DEVICE_TABLE( pci, si_pci_tbl);
 
 static struct proc_dir_entry *si_proc;
 
-int si_read_proc(char *buf, char **start, off_t offset,  int len, 
-                                                  int *eof, void *private)
+int si_show_proc(struct seq_file *seq, void *private)
 {
   struct SIDEVICE *d;
   struct pci_dev *pci;
 
-  len=0;
   d = si_devices;
   while( d ) {
     pci = d->pci;
     if( pci ) {
-      len +=sprintf( buf+len,
+      seq_printf( seq,
         "SI %s, major %d minor %d devfn %d irq %d isopen %d\n", 
                    pci_name(pci), si_major, d->minor, pci->devfn, pci->irq,
                    atomic_read(&d->isopen)  );
 
     } else {
-      len +=sprintf( buf+len, "SI TEST major %d minor %d\n", si_major, d->minor);
+      seq_printf( seq, "SI TEST major %d minor %d\n", si_major, d->minor);
     }
-      if( len > PAGE_SIZE-100 )
-        break;
 
     d = d->next;
   }
-  *start = buf + offset;
-
-  return len > offset ? len - offset : 0;
+  return 0;
 }
 
+static int si_open_proc (struct inode *inode, struct file *file)
+{
+  return single_open (file, si_show_proc, NULL);
+}
+
+/* proc file operations */
+
+struct file_operations si_proc_fops = {
+    .owner   = THIS_MODULE,
+    .open    = si_open_proc,
+    .read    = seq_read,
+    .llseek  = seq_lseek,
+    .release = single_release,
+};
 
 /* The different file operations */
 
@@ -357,9 +366,8 @@ static int __init si_init_module(void)
 
   si_major = result; /* dynamic */
 
-  if((si_proc = create_proc_entry("si3097", 0, 0 )))
-     si_proc->read_proc = si_read_proc;
-  
+  if (!(si_proc = proc_create ("si3097", 0, NULL, &si_proc_fops)))
+    return -ENOMEM;
 
   if( cardcount == 0 )
     return -ENODEV;
