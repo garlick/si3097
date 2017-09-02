@@ -137,7 +137,7 @@ struct vm_area_struct *vma;
 
   vma->vm_ops = &si_vm_ops;
   vma->vm_file = filp;
-  vma->vm_flags |= VM_RESERVED;   /* Don't swap */
+  vma->vm_flags |= (VM_DONTEXPAND | VM_DONTDUMP);   /* Don't swap */
 
   si_vmaopen(vma);
   return(0);
