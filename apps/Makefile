@@ -1,5 +1,5 @@
  
-ALL  = test_app image
+ALL  = test_app #image
 
 GTK_CFLAGS = `pkg-config --cflags gtk+-2.0`
 GTK_LIBS = `pkg-config --libs gtk+-2.0`
