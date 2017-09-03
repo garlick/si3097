@@ -49,6 +49,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "si_app.h"
 #include "lib.h"
 #include "demux.h"
+#include "uart.h"
 
 #define BOX_PACK 0
 #define FRAME_SPACE 3
@@ -241,12 +242,12 @@ static void do_start( GtkWidget *widget, gpointer   data )
 
 static void do_params( GtkWidget *widget, gpointer   data )
 {
-  show_param( data );
+  uart_show_param( data );
 }
 
 static void do_controls( GtkWidget *widget, gpointer   data )
 {
-  show_control( data );
+  uart_show_control( data );
 }
 
 static void do_load( widget, dp )
@@ -473,11 +474,11 @@ int main( int argc, char *argv[] )
   gtk_box_pack_start(GTK_BOX(hbox),but,TRUE,TRUE,0);
   gtk_widget_show (but);
 
-  setup_cmd_dat( head ); /* setup the parameter structures */
+  uart_setup_cmd_dat( head ); /* setup the parameter structures */
 
   if( fd >= 0 ) {
-    param_load_all( head );
-    config_dma( NULL, head);
+    uart_param_load_all( head );
+    uart_config_dma( NULL, head);
   }
 
   gtk_main();
