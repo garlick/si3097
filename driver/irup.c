@@ -24,23 +24,10 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 /* This is the interrupt code for the si3097 */
 
 #include <linux/version.h>
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
-
-#include <linux/module.h>
-#include <linux/interrupt.h>
-
-#define wait_event_interruptible_timeout( a, b, c )\
-            (c = wait_event_interruptible( a, b ))
-
-#else
-
 #include <linux/sched.h>
 #include <linux/module.h>
 #include <linux/interrupt.h>
 #include <linux/workqueue.h>
-#endif
-
 #include <linux/proc_fs.h>
 #include <linux/poll.h>
 #include <linux/pci.h>
@@ -129,29 +116,15 @@ irqreturn_t si_interrupt( int irq, struct SIDEVICE *dev )
     // Mask the PCI Interrupt reenabled in bottom half
     PLX_REG_WRITE( dev, PCI9054_INT_CTRL_STAT, ctrl_stat & ~(1 << 8));
 
-#if LINUX_VERSION_CODE > KERNEL_VERSION(2,6,0)
   // Schedule bottom half to complete interrupt processing
   // Reset task structure
 
-  PREPARE_WORK( &dev->task, si_bottom_half );
+  //PREPARE_WORK( &dev->task, si_bottom_half );
 
   dev->source = source; // pass to bottom half
 
   // Add task to queue the processing of the irq
   queue_work( dev->bottom_half_wq, &dev->task);
-
-#else
-  
-  dev->source = source; // pass to bottom half
-
-  dev->task.sync = 0;
-
-  // Add task to queue the processing of the irq
-  queue_task( &dev->task, &tq_immediate );
-
-  mark_bh( IMMEDIATE_BH );
-
-#endif
 
   return IRQ_HANDLED;
 }

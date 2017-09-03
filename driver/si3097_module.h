@@ -39,12 +39,8 @@ struct SIDEVICE {
   unsigned int bar_len[4]; /* length of PCI bus address mappings */
   atomic_t vmact;          /* number of vma opens */
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
-  struct tq_struct task;
-#else
   struct work_struct task;
   struct workqueue_struct  *bottom_half_wq; /* Task queue for bottom half */
-#endif
 
   wait_queue_head_t dma_block;    /* for those who block on DMA */
   int source;              /* interrupt source, passed from irup to bhalf */
@@ -334,11 +330,7 @@ int si_uart_break(struct SIDEVICE *, int );
 int si_stop_dma(struct SIDEVICE *, struct SI_DMA_STATUS *);
 void si_free_sgl(struct SIDEVICE *dev);
 
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
-struct page *si_vmanopage( struct vm_area_struct *, unsigned long, int );
-#else
 struct page *si_vmanopage( struct vm_area_struct *, unsigned long, int * );
-#endif
 
 int si_config_dma( struct SIDEVICE *);
 void si_free_sgl( struct SIDEVICE *dev );

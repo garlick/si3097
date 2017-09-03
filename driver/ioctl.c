@@ -24,22 +24,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 /* define the ioctl calls */
 
 #include <linux/version.h>
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
-
-#include <linux/module.h>
-#include <linux/sched.h>
-#include <linux/interrupt.h>
-
-#define wait_event_interruptible_timeout( a, b, c )\
-            (c = wait_event_interruptible( a, b ))
-
-#else
-
 #include <linux/module.h>
 #include <linux/interrupt.h>
-#endif
-
 #include <linux/proc_fs.h>
 #include <linux/poll.h>
 #include <linux/pci.h>

@@ -22,24 +22,12 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 #include <linux/version.h>
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
-
-#include <linux/module.h>
-#include <linux/interrupt.h>
-
-#define wait_event_interruptible_timeout( a, b, c )\
-            (c = wait_event_interruptible( a, b ))
-
-#else
-
 #include <linux/sched.h>
 #include <linux/module.h>
 #include <linux/interrupt.h>
 #include <linux/workqueue.h>
-#endif
-
 #include <linux/proc_fs.h>
+#include <linux/seq_file.h>
 #include <linux/poll.h>
 #include <linux/pci.h>
 #include <linux/delay.h>
@@ -93,35 +81,43 @@ MODULE_DEVICE_TABLE( pci, si_pci_tbl);
 
 static struct proc_dir_entry *si_proc;
 
-int si_read_proc(char *buf, char **start, off_t offset,  int len, 
-                                                  int *eof, void *private)
+int si_show_proc(struct seq_file *seq, void *private)
 {
   struct SIDEVICE *d;
   struct pci_dev *pci;
 
-  len=0;
   d = si_devices;
   while( d ) {
     pci = d->pci;
     if( pci ) {
-      len +=sprintf( buf+len,
+      seq_printf( seq,
         "SI %s, major %d minor %d devfn %d irq %d isopen %d\n", 
                    pci_name(pci), si_major, d->minor, pci->devfn, pci->irq,
                    atomic_read(&d->isopen)  );
 
     } else {
-      len +=sprintf( buf+len, "SI TEST major %d minor %d\n", si_major, d->minor);
+      seq_printf( seq, "SI TEST major %d minor %d\n", si_major, d->minor);
     }
-      if( len > PAGE_SIZE-100 )
-        break;
 
     d = d->next;
   }
-  *start = buf + offset;
-
-  return len > offset ? len - offset : 0;
+  return 0;
 }
 
+static int si_open_proc (struct inode *inode, struct file *file)
+{
+  return single_open (file, si_show_proc, NULL);
+}
+
+/* proc file operations */
+
+struct file_operations si_proc_fops = {
+    .owner   = THIS_MODULE,
+    .open    = si_open_proc,
+    .read    = seq_read,
+    .llseek  = seq_lseek,
+    .release = single_release,
+};
 
 /* The different file operations */
 
@@ -157,8 +153,8 @@ const struct pci_device_id *id;
     wh++;
   }
 
-  if( !pci_dma_supported( pci, 0xffffffff ) ) {
-    printk("SI pci_dma_supported failed\n");
+  if(pci_set_dma_mask( pci, 0xffffffff ) != 0) {
+    printk("SI pci_set_dma_mask failed\n");
     return(-EIO);
   }
 
@@ -225,18 +221,8 @@ const struct pci_device_id *id;
 
   pci_set_master( dev->pci );
 
-
-#if LINUX_VERSION_CODE < KERNEL_VERSION(2,6,0)
-
-  dev->task.sync = 0;
-  dev->task.routine = 0;
-  dev->task.data = dev;
-#else
-
   dev->bottom_half_wq = create_workqueue("SI3097");
   INIT_WORK( &dev->task, si_bottom_half );
-
-#endif
 
   spin_lock_init( &dev->uart_lock );
   spin_lock_init( &dev->dma_lock );
@@ -380,9 +366,8 @@ static int __init si_init_module(void)
 
   si_major = result; /* dynamic */
 
-  if((si_proc = create_proc_entry("si3097", 0, 0 )))
-     si_proc->read_proc = si_read_proc;
-  
+  if (!(si_proc = proc_create ("si3097", 0, NULL, &si_proc_fops)))
+    return -ENOMEM;
 
   if( cardcount == 0 )
     return -ENODEV;
