@@ -54,14 +54,38 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #define BOX_PACK 0
 #define FRAME_SPACE 3
 
-void *fun_fill( void * );
-inline unsigned char false_color_red( unsigned short );
-inline unsigned char false_color_green( unsigned short );
-inline unsigned char false_color_blue( unsigned short );
 
-int fill_pix_with_data( struct SI_CAMERA*, unsigned short *, int);
-static void dma_go( struct SI_CAMERA *, int );
-void *image_fill( void *);
+gboolean dma_poll( gpointer *dp );
+void destroy( GtkWidget *widget, gpointer   data );
+void do_abort( GtkWidget *widget, gpointer   data );
+void dma_done( gpointer a, gint b, GdkInputCondition condition );
+void *image_fill( void *v );
+void dma_go( struct SI_CAMERA *head, int cmd );
+void do_start( GtkWidget *widget, gpointer   data );
+void do_params( GtkWidget *widget, gpointer   data );
+void do_controls( GtkWidget *widget, gpointer   data );
+void do_load( GtkWidget *widget, void *dp );
+int store_filename (GtkWidget *widget, void *dp);
+void do_save( GtkWidget *widget, void *dp);
+void fun_fill( void *dp );
+void fill_pix_with_data( struct SI_CAMERA *head, unsigned short *data,
+                         int side );
+void scale_data( unsigned short *data, int n );
+
+static inline unsigned char false_color_red( unsigned short dp )
+{
+  return dp>>8;
+}
+
+static inline unsigned char false_color_green( unsigned short dp )
+{
+  return dp>>8;
+}
+
+static inline unsigned char false_color_blue( unsigned short dp )
+{
+  return dp>>8;
+}
 
 /*
 gboolean timeout( dp )
@@ -78,8 +102,7 @@ gpointer *dp;
 }
 */
 
-gboolean dma_poll( dp )
-gpointer *dp;
+gboolean dma_poll( gpointer *dp )
 {
   struct SI_CAMERA *head;
 
@@ -99,12 +122,12 @@ gpointer *dp;
   }
 }
 
-static void destroy( GtkWidget *widget, gpointer   data )
+void destroy( GtkWidget *widget, gpointer   data )
 {
   gtk_main_quit ();
 }
 
-static void do_abort( GtkWidget *widget, gpointer   data )
+void do_abort( GtkWidget *widget, gpointer   data )
 {
   struct SI_CAMERA *head;
 
@@ -119,10 +142,7 @@ static void do_abort( GtkWidget *widget, gpointer   data )
 
 }
 
-static void dma_done(a, b, condition)
-gpointer a;
-gint b;
-GdkInputCondition condition;
+void dma_done( gpointer a, gint b, GdkInputCondition condition )
 {
   struct SI_CAMERA *head;
   int contin;
@@ -185,8 +205,7 @@ GdkInputCondition condition;
 }
 
 
-void *image_fill( v )
-void *v;
+void *image_fill( void *v )
 {
   struct SI_CAMERA *head;
 
@@ -200,9 +219,7 @@ void *v;
   pthread_exit(NULL);
 }
 
-static void dma_go( head, cmd)
-struct SI_CAMERA *head;
-int cmd;
+void dma_go( struct SI_CAMERA *head, int cmd )
 {
 
   head->dma_aborted = 0;
@@ -232,7 +249,7 @@ int cmd;
 //  g_timeout_add( 200, dma_poll, head );
 }
 
-static void do_start( GtkWidget *widget, gpointer   data )
+void do_start( GtkWidget *widget, gpointer   data )
 {
   struct SI_CAMERA *head;
 
@@ -240,19 +257,17 @@ static void do_start( GtkWidget *widget, gpointer   data )
   dma_go( data, head->command );
 }
 
-static void do_params( GtkWidget *widget, gpointer   data )
+void do_params( GtkWidget *widget, gpointer   data )
 {
   uart_show_param( data );
 }
 
-static void do_controls( GtkWidget *widget, gpointer   data )
+void do_controls( GtkWidget *widget, gpointer   data )
 {
   uart_show_control( data );
 }
 
-static void do_load( widget, dp )
-GtkWidget *widget;
-void *dp;
+void do_load( GtkWidget *widget, void *dp )
 {
   GtkWidget *dialog;
   int ix;
@@ -310,7 +325,7 @@ void *dp;
 
 /* get the chose filename */
 
-store_filename (GtkWidget *widget, void *dp)
+int store_filename (GtkWidget *widget, void *dp)
 {
   int fd, n;
   struct SI_CAMERA *head;
@@ -329,9 +344,7 @@ store_filename (GtkWidget *widget, void *dp)
   return 0;
 }
 
-static void do_save( widget, dp )
-GtkWidget *widget;
-void *dp;
+void do_save( GtkWidget *widget, void *dp)
 {
   GtkWidget *dialog;
   time_t tm;
@@ -486,8 +499,7 @@ int main( int argc, char *argv[] )
 
 /* just to see something pretty */
 
-void *fun_fill( dp )
-void *dp;
+void fun_fill( void *dp )
 {
   struct SI_CAMERA *head;
   int stride;
@@ -530,14 +542,11 @@ void *dp;
   }
   head->fraction = (double)1.0;
   head->dma_active = 0;
-  return NULL;
 }
 
 
-fill_pix_with_data( head, data, side )
-struct SI_CAMERA *head;
-unsigned short *data;
-int side;
+void fill_pix_with_data( struct SI_CAMERA *head, unsigned short *data,
+                         int side )
 {
   int stride;
   int width, height, n_channels, row, col;
@@ -577,27 +586,7 @@ int side;
 }
 
 
-inline unsigned char false_color_red( dp )
-unsigned short dp;
-{
-  return dp>>8;
-}
-
-inline unsigned char false_color_green( dp )
-unsigned short dp;
-{
-  return dp>>8;
-}
-
-inline unsigned char false_color_blue( dp )
-unsigned short dp;
-{
-  return dp>>8;
-}
-
-scale_data( data, n )
-unsigned short *data;
-int n;
+void scale_data( unsigned short *data, int n )
 {
   int tot, i;
   unsigned short max;
