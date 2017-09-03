@@ -1,4 +1,4 @@
-/* 
+/*
 
 Dinterlace code for the
 Spectral Instruments 3097 Camera Interface
@@ -27,6 +27,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "si3097.h"
 #include "si_app.h"
+#include "dinter.h"
 
 //int bSave = 0;
 //int dma_mode = 0;
@@ -66,19 +67,15 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 //        }
 //
 
-/* based on the DINTERLACE configuration 
-   reorder the data from data buffer "from" to the 
+/* based on the DINTERLACE configuration
+   reorder the data from data buffer "from" to the
    data buffer "to"
 */
 
 
-void deinterlace( cfg, from, to, len_bytes )
-struct SI_DINTERLACE *cfg;
-unsigned short *from;
-unsigned short *to;
-int len_bytes;
+void si_deinterlace( struct SI_DINTERLACE *cfg, unsigned short *from,
+                     unsigned short *to, int len_bytes )
 {
-  int i;
   unsigned int k;
   unsigned short *to_ptr;
   unsigned short *from_ptr;
@@ -86,11 +83,9 @@ int len_bytes;
   unsigned int  offset;
   unsigned int  nX, nY;
   unsigned int  index;
-  int    ntb, n_rows, n_cols;
-  size_t  nStrLen;
+  int    n_rows, n_cols;
   unsigned int  n1cols,n2cols,n3cols,n4cols;
   unsigned int  n1rows,n2rows,n3rows,n4rows;
-  int    repeat;
 
 
   to_ptr = to;        // pick up the image pointer for write
@@ -100,7 +95,6 @@ int len_bytes;
   offset  = 0;          // offset into (input)image
   nX  = 0;                 // X pointer
   nY  = 0;                 // Y pointer
-  ntb = 0;                 // pointer to test buffer
   cfg->n_ptr_pos = 0;      // pointer to filling buffer
 
   len_words = len_bytes/2;
@@ -118,17 +112,17 @@ int len_bytes;
       for (k=0; k<len_words; k++)
       {
         switch (offset % 4) {
-        case 0:  
-          index = nX + n_cols * nY; 
+        case 0:
+          index = nX + n_cols * nY;
           break;  // serial top incrementing
-        case 1:  
-          index = (n_cols - nX -1) + (n_cols * nY);  
+        case 1:
+          index = (n_cols - nX -1) + (n_cols * nY);
           break;  // serial top decrementing
-        case 2:  
-          index = (nX + n_cols * n_rows - n_cols) - (n_cols * nY);  
+        case 2:
+          index = (nX + n_cols * n_rows - n_cols) - (n_cols * nY);
           break;  // serial bottom incrementing
-        case 3:  
-          index = (n_cols * n_rows - nX - 1) - (n_cols * nY); 
+        case 3:
+          index = (n_cols * n_rows - nX - 1) - (n_cols * nY);
           // serial bottom decrementing
           nX++;
           if (nX == n_cols/2) {
@@ -146,10 +140,10 @@ int len_bytes;
     case 2:                          // --> serial split de-interlace
       for (k=0; k<len_words; k++) {
         switch (offset % 2) {
-        case 0:  
-          index = nX + n_cols * nY;  
+        case 0:
+          index = nX + n_cols * nY;
           break;  // serial top incrementing
-        case 1:  
+        case 1:
           index = (n_cols - nX -1) + (n_cols * nY);
           // serial top decrementing
           nX++;
@@ -171,7 +165,7 @@ int len_bytes;
         case 0:
           index = nX + n_cols * nY;
           break;  // serial top incrementing
-        case 1:  
+        case 1:
           index = (nX + n_cols * n_rows - n_cols) - (n_cols * nY);
           // serial bottom incrementing
           nX++;
@@ -190,10 +184,10 @@ int len_bytes;
     case 4:                          // --> parallel split de-interlace
       for (k=0; k<len_words; k++) {
         switch (offset % 2) {
-        case 0:  
+        case 0:
           index = nX + n_cols * nY;
           break;  // serial top incrementing
-        case 1:  
+        case 1:
           index = (n_cols * n_rows - nX - 1) - (n_cols * nY);
           // serial bottom decrementing
           nX++;
@@ -218,31 +212,31 @@ int len_bytes;
       n3rows = n1rows * 3;
       for (k=0; k<len_words; k++) {
         switch (offset % 9) {
-        case 0:  
+        case 0:
           index = nX + n3cols * nY;
           break;
-        case 1:  
-          index = nX + n1cols + n3cols * nY;  
+        case 1:
+          index = nX + n1cols + n3cols * nY;
           break;
-        case 2:  
-          index = nX + n2cols + n3cols * nY;  
+        case 2:
+          index = nX + n2cols + n3cols * nY;
           break;
-        case 3:  
+        case 3:
           index = nX + (n1rows * n3cols) + n3cols * nY;
           break;
-        case 4:  
-          index = nX + n1cols + (n1rows * n3cols) + n3cols * nY;  
+        case 4:
+          index = nX + n1cols + (n1rows * n3cols) + n3cols * nY;
           break;
-        case 5:  
+        case 5:
           index = nX + n2cols + (n1rows * n3cols) + n3cols * nY;
           break;
-        case 6:  
+        case 6:
           index = nX + (n2rows * n3cols)      + n3cols * nY;
           break;
-        case 7:  
-          index = nX + n1cols + (n2rows * n3cols) + n3cols * nY;  
+        case 7:
+          index = nX + n1cols + (n2rows * n3cols) + n3cols * nY;
           break;
-        case 8:  
+        case 8:
           index = nX + n2cols + (n2rows * n3cols) + n3cols * nY;
           nX++;
           if (nX == n1cols) {
@@ -266,40 +260,40 @@ int len_bytes;
       n3rows = n1rows * 3;
       for (k=0; k<len_words; k++) {
         switch (offset % 9) {
-        case 0:  
+        case 0:
           index = (n1cols - nX - 1) + (n1rows * n3cols -n3cols) -
-                       n3cols * nY;  
+                       n3cols * nY;
           break;
-        case 1:  
+        case 1:
           index = (n2cols - nX - 1) + (n1rows * n3cols -n3cols) -
-            n3cols * nY;  
+            n3cols * nY;
           break;
-        case 2:  
-          index = (n3cols - nX - 1) + (n1rows * n3cols -n3cols) -  
-            n3cols * nY;  
+        case 2:
+          index = (n3cols - nX - 1) + (n1rows * n3cols -n3cols) -
+            n3cols * nY;
           break;
-        case 3:  
+        case 3:
           index = (n1cols - nX - 1) + (n2rows * n3cols -n3cols) -
-            n3cols * nY;  
+            n3cols * nY;
           break;
-        case 4:  
-          index = (n2cols - nX - 1) + (n2rows * n3cols -n3cols) -  
-            n3cols * nY;  
+        case 4:
+          index = (n2cols - nX - 1) + (n2rows * n3cols -n3cols) -
+            n3cols * nY;
           break;
-        case 5:  
-          index = (n3cols - nX - 1) + (n2rows * n3cols -n3cols) -  
-            n3cols * nY;  
+        case 5:
+          index = (n3cols - nX - 1) + (n2rows * n3cols -n3cols) -
+            n3cols * nY;
           break;
-        case 6:  
+        case 6:
           index = (n1cols - nX - 1) + (n3rows * n3cols -n3cols) -
-            n3cols * nY;  
+            n3cols * nY;
           break;
-        case 7:  
-          index = (n2cols - nX - 1) + (n3rows * n3cols -n3cols) -  
-            n3cols * nY;  
+        case 7:
+          index = (n2cols - nX - 1) + (n3rows * n3cols -n3cols) -
+            n3cols * nY;
           break;
-        case 8:  
-          index = (n3cols - nX - 1) + (n3rows * n3cols -n3cols) -  
+        case 8:
+          index = (n3cols - nX - 1) + (n3rows * n3cols -n3cols) -
             n3cols * nY;
           nX++;
           if (nX == n1cols) {
@@ -324,62 +318,62 @@ int len_bytes;
       for (k=0; k<len_words; k++) {
         switch (offset % 18) {
         case 0:
-          index = nX  + n3cols * nY;  
+          index = nX  + n3cols * nY;
           break;
-        case 1:    
-          index = nX + n1cols + n3cols * nY;  
+        case 1:
+          index = nX + n1cols + n3cols * nY;
           break;
-        case 2:    
+        case 2:
           index = nX + n2cols + n3cols * nY;
           break;
         case 3:
           index = nX + (n1rows * n3cols) + n3cols * nY;
           break;
         case 4:
-          index = nX + n1cols + (n1rows * n3cols)  + n3cols * nY;  
+          index = nX + n1cols + (n1rows * n3cols)  + n3cols * nY;
           break;
-        case 5:    
-          index = nX + n2cols + (n1rows * n3cols)  + n3cols * nY;  
+        case 5:
+          index = nX + n2cols + (n1rows * n3cols)  + n3cols * nY;
           break;
-        case 6:    
+        case 6:
           index = nX + (n2rows * n3cols) + n3cols * nY;
           break;
-        case 7: 
-          index = nX + n1cols + (n2rows * n3cols)  + n3cols * nY;  
+        case 7:
+          index = nX + n1cols + (n2rows * n3cols)  + n3cols * nY;
           break;
         case 8:
-          index = nX + n2cols + (n2rows * n3cols)  + n3cols * nY;  
+          index = nX + n2cols + (n2rows * n3cols)  + n3cols * nY;
           break;
         case 9:
           index = (n1cols - nX - 1)  + (n1rows * n3cols -n3cols) -
              n3cols * nY;
           break;
-        case 10: 
+        case 10:
           index = (n2cols - nX - 1)  + (n1rows * n3cols -n3cols) -
              n3cols * nY;
           break;
         case 11:
-          index = (n3cols - nX - 1)  + (n1rows * n3cols -n3cols) - 
-            n3cols * nY;  
+          index = (n3cols - nX - 1)  + (n1rows * n3cols -n3cols) -
+            n3cols * nY;
           break;
         case 12:
-          index = (n1cols - nX - 1)  + (n2rows * n3cols -n3cols) - 
-            n3cols * nY;  
+          index = (n1cols - nX - 1)  + (n2rows * n3cols -n3cols) -
+            n3cols * nY;
           break;
         case 13:
           index = (n2cols - nX - 1)  + (n2rows * n3cols -n3cols) -
             n3cols * nY;
           break;
         case 14:
-          index = (n3cols - nX - 1)  + (n2rows * n3cols -n3cols) - 
+          index = (n3cols - nX - 1)  + (n2rows * n3cols -n3cols) -
             n3cols * nY;
           break;
         case 15:
           index = (n1cols - nX - 1)  + (n3rows * n3cols -n3cols) -
-             n3cols * nY;  
+             n3cols * nY;
           break;
-        case 16:  
-          index = (n2cols - nX - 1)  + (n3rows * n3cols -n3cols) - 
+        case 16:
+          index = (n2cols - nX - 1)  + (n3rows * n3cols -n3cols) -
             n3cols * nY;
           break;
         case 17:
@@ -419,40 +413,40 @@ int len_bytes;
             index = nX + (n4cols * nY)        + n2cols;
             break;
           case 3:
-            index = nX + (n4cols * nY)        + n3cols;  
+            index = nX + (n4cols * nY)        + n3cols;
             break;
           case 4:
-            index = nX + (n4cols * (n1rows + nY));      
+            index = nX + (n4cols * (n1rows + nY));
             break;
           case 5:
-            index = nX + (n4cols * (n1rows + nY)) + n1cols;  
+            index = nX + (n4cols * (n1rows + nY)) + n1cols;
             break;
           case 6:
-            index = nX + (n4cols * (n1rows + nY)) + n2cols;  
+            index = nX + (n4cols * (n1rows + nY)) + n2cols;
             break;
-          case 7:    
-            index = nX + (n4cols * (n1rows + nY)) + n3cols;  
+          case 7:
+            index = nX + (n4cols * (n1rows + nY)) + n3cols;
             break;
           case 8:
-            index = nX + (n4cols * (n2rows + nY));      
+            index = nX + (n4cols * (n2rows + nY));
             break;
           case 9:
-            index = nX + (n4cols * (n2rows + nY)) + n1cols;  
+            index = nX + (n4cols * (n2rows + nY)) + n1cols;
             break;
           case 10:
-            index = nX + (n4cols * (n2rows + nY)) + n2cols;  
+            index = nX + (n4cols * (n2rows + nY)) + n2cols;
             break;
           case 11:
-            index = nX + (n4cols * (n2rows + nY)) + n3cols;  
+            index = nX + (n4cols * (n2rows + nY)) + n3cols;
             break;
           case 12:
-            index = nX + (n4cols * (n3rows + nY));      
+            index = nX + (n4cols * (n3rows + nY));
             break;
           case 13:
-            index = nX + (n4cols * (n3rows + nY)) + n1cols;  
+            index = nX + (n4cols * (n3rows + nY)) + n1cols;
             break;
-          case 14:  
-            index = nX + (n4cols * (n3rows + nY)) + n2cols;  
+          case 14:
+            index = nX + (n4cols * (n3rows + nY)) + n2cols;
             break;
           case 15:
             index = nX + (n4cols * (n3rows + nY)) + n3cols;
@@ -481,51 +475,51 @@ int len_bytes;
       for( k=0 ; k<len_words ; k++ ) {
         switch( offset % 16 ) {
           case 0:
-            index = (n1cols - nX - 1) + ((n1rows - nY - 1) * n4cols);  
+            index = (n1cols - nX - 1) + ((n1rows - nY - 1) * n4cols);
             break;
           case 1:
-            index = (n2cols - nX - 1) + ((n1rows - nY - 1) * n4cols);  
+            index = (n2cols - nX - 1) + ((n1rows - nY - 1) * n4cols);
             break;
           case 2:
-            index = (n3cols - nX - 1) + ((n1rows - nY - 1) * n4cols);  
+            index = (n3cols - nX - 1) + ((n1rows - nY - 1) * n4cols);
             break;
           case 3:
-            index = (n4cols - nX - 1) + ((n1rows - nY - 1) * n4cols);  
+            index = (n4cols - nX - 1) + ((n1rows - nY - 1) * n4cols);
             break;
           case 4:
-            index = (n1cols - nX - 1) + ((n2rows - nY - 1) * n4cols);  
+            index = (n1cols - nX - 1) + ((n2rows - nY - 1) * n4cols);
             break;
           case 5:
-            index = (n2cols - nX - 1) + ((n2rows - nY - 1) * n4cols);  
+            index = (n2cols - nX - 1) + ((n2rows - nY - 1) * n4cols);
             break;
           case 6:
-            index = (n3cols - nX - 1) + ((n2rows - nY - 1) * n4cols);  
+            index = (n3cols - nX - 1) + ((n2rows - nY - 1) * n4cols);
             break;
           case 7:
-            index = (n4cols - nX - 1) + ((n2rows - nY - 1) * n4cols);  
+            index = (n4cols - nX - 1) + ((n2rows - nY - 1) * n4cols);
             break;
           case 8:
-            index = (n1cols - nX - 1) + ((n3rows - nY - 1) * n4cols);  
+            index = (n1cols - nX - 1) + ((n3rows - nY - 1) * n4cols);
             break;
           case 9:
-            index = (n2cols - nX - 1) + ((n3rows - nY - 1) * n4cols);  
+            index = (n2cols - nX - 1) + ((n3rows - nY - 1) * n4cols);
             break;
-          case 10:  
-            index = (n3cols - nX - 1) + ((n3rows - nY - 1) * n4cols);  
+          case 10:
+            index = (n3cols - nX - 1) + ((n3rows - nY - 1) * n4cols);
             break;
           case 11:
-            index = (n4cols - nX - 1) + ((n3rows - nY - 1) * n4cols);  
+            index = (n4cols - nX - 1) + ((n3rows - nY - 1) * n4cols);
             break;
-          case 12:  
-            index = (n1cols - nX - 1) + ((n4rows - nY - 1) * n4cols);  
+          case 12:
+            index = (n1cols - nX - 1) + ((n4rows - nY - 1) * n4cols);
             break;
           case 13:
-            index = (n2cols - nX - 1) + ((n4rows - nY - 1) * n4cols);  
+            index = (n2cols - nX - 1) + ((n4rows - nY - 1) * n4cols);
             break;
-          case 14:  
-            index = (n3cols - nX - 1) + ((n4rows - nY - 1) * n4cols);  
+          case 14:
+            index = (n3cols - nX - 1) + ((n4rows - nY - 1) * n4cols);
             break;
-          case 15:  
+          case 15:
             index = (n4cols - nX - 1) + ((n4rows - nY - 1) * n4cols);
             nX++;
             if( nX >= n1cols ) {
@@ -552,99 +546,99 @@ int len_bytes;
       for( k=0 ; k<len_words ; k++ ) {
         switch( offset % 32 ) {
           case 0:
-            index = nX + (n4cols * nY); 
+            index = nX + (n4cols * nY);
             break;
           case 1:
-            index = nX + (n4cols * nY)        + n1cols;  
+            index = nX + (n4cols * nY)        + n1cols;
             break;
           case 2:
-            index = nX + (n4cols * nY)        + n2cols;  
+            index = nX + (n4cols * nY)        + n2cols;
             break;
           case 3:
-            index = nX + (n4cols * nY)        + n3cols;  
+            index = nX + (n4cols * nY)        + n3cols;
             break;
           case 4:
-            index = nX + (n4cols * (n1rows + nY));      
+            index = nX + (n4cols * (n1rows + nY));
             break;
           case 5:
-            index = nX + (n4cols * (n1rows + nY)) + n1cols;  
+            index = nX + (n4cols * (n1rows + nY)) + n1cols;
             break;
           case 6:
-            index = nX + (n4cols * (n1rows + nY)) + n2cols;  
+            index = nX + (n4cols * (n1rows + nY)) + n2cols;
             break;
-          case 7:    
-            index = nX + (n4cols * (n1rows + nY)) + n3cols;  
+          case 7:
+            index = nX + (n4cols * (n1rows + nY)) + n3cols;
             break;
-          case 8:    
-            index = nX + (n4cols * (n2rows + nY));      
+          case 8:
+            index = nX + (n4cols * (n2rows + nY));
             break;
-          case 9:    
-            index = nX + (n4cols * (n2rows + nY)) + n1cols;  
+          case 9:
+            index = nX + (n4cols * (n2rows + nY)) + n1cols;
             break;
-          case 10:  
-            index = nX + (n4cols * (n2rows + nY)) + n2cols;  
+          case 10:
+            index = nX + (n4cols * (n2rows + nY)) + n2cols;
             break;
-          case 11:  
-            index = nX + (n4cols * (n2rows + nY)) + n3cols;  
+          case 11:
+            index = nX + (n4cols * (n2rows + nY)) + n3cols;
             break;
-          case 12:  
-            index = nX + (n4cols * (n3rows + nY));      
+          case 12:
+            index = nX + (n4cols * (n3rows + nY));
             break;
-          case 13:  
-            index = nX + (n4cols * (n3rows + nY)) + n1cols;  
+          case 13:
+            index = nX + (n4cols * (n3rows + nY)) + n1cols;
             break;
-          case 14:  
-            index = nX + (n4cols * (n3rows + nY)) + n2cols;  
+          case 14:
+            index = nX + (n4cols * (n3rows + nY)) + n2cols;
             break;
-          case 15:  
-            index = nX + (n4cols * (n3rows + nY)) + n3cols;  
+          case 15:
+            index = nX + (n4cols * (n3rows + nY)) + n3cols;
             break;
-          case 16:  
-            index = (n1cols - nX - 1) + ((n1rows - nY - 1) * n4cols);  
+          case 16:
+            index = (n1cols - nX - 1) + ((n1rows - nY - 1) * n4cols);
             break;
-          case 17:  
-            index = (n2cols - nX - 1) + ((n1rows - nY - 1) * n4cols);  
+          case 17:
+            index = (n2cols - nX - 1) + ((n1rows - nY - 1) * n4cols);
             break;
-          case 18:  
-            index = (n3cols - nX - 1) + ((n1rows - nY - 1) * n4cols);  
+          case 18:
+            index = (n3cols - nX - 1) + ((n1rows - nY - 1) * n4cols);
             break;
-          case 19:  
-            index = (n4cols - nX - 1) + ((n1rows - nY - 1) * n4cols);  
+          case 19:
+            index = (n4cols - nX - 1) + ((n1rows - nY - 1) * n4cols);
             break;
-          case 20:  
-            index = (n1cols - nX - 1) + ((n2rows - nY - 1) * n4cols);  
+          case 20:
+            index = (n1cols - nX - 1) + ((n2rows - nY - 1) * n4cols);
             break;
-          case 21:  
-            index = (n2cols - nX - 1) + ((n2rows - nY - 1) * n4cols);  
+          case 21:
+            index = (n2cols - nX - 1) + ((n2rows - nY - 1) * n4cols);
             break;
-          case 22:  
-            index = (n3cols - nX - 1) + ((n2rows - nY - 1) * n4cols);  
+          case 22:
+            index = (n3cols - nX - 1) + ((n2rows - nY - 1) * n4cols);
             break;
-          case 23:  
-            index = (n4cols - nX - 1) + ((n2rows - nY - 1) * n4cols);  
+          case 23:
+            index = (n4cols - nX - 1) + ((n2rows - nY - 1) * n4cols);
             break;
-          case 24:  
-            index = (n1cols - nX - 1) + ((n3rows - nY - 1) * n4cols);  
+          case 24:
+            index = (n1cols - nX - 1) + ((n3rows - nY - 1) * n4cols);
             break;
-          case 25:  
-            index = (n2cols - nX - 1) + ((n3rows - nY - 1) * n4cols);  
+          case 25:
+            index = (n2cols - nX - 1) + ((n3rows - nY - 1) * n4cols);
             break;
-          case 26:  
-            index = (n3cols - nX - 1) + ((n3rows - nY - 1) * n4cols);  
+          case 26:
+            index = (n3cols - nX - 1) + ((n3rows - nY - 1) * n4cols);
             break;
-          case 27:  
-            index = (n4cols - nX - 1) + ((n3rows - nY - 1) * n4cols);  
+          case 27:
+            index = (n4cols - nX - 1) + ((n3rows - nY - 1) * n4cols);
             break;
-          case 28:  
-            index = (n1cols - nX - 1) + ((n4rows - nY - 1) * n4cols);  
+          case 28:
+            index = (n1cols - nX - 1) + ((n4rows - nY - 1) * n4cols);
             break;
-          case 29:  
-            index = (n2cols - nX - 1) + ((n4rows - nY - 1) * n4cols);  
+          case 29:
+            index = (n2cols - nX - 1) + ((n4rows - nY - 1) * n4cols);
             break;
-          case 30:  
-            index = (n3cols - nX - 1) + ((n4rows - nY - 1) * n4cols);  
+          case 30:
+            index = (n3cols - nX - 1) + ((n4rows - nY - 1) * n4cols);
             break;
-          case 31:  
+          case 31:
             index = (n4cols - nX - 1) + ((n4rows - nY - 1) * n4cols);
             nX++;
             if( nX >= n1cols ) {
@@ -660,6 +654,6 @@ int len_bytes;
       }
       break;
   }
-  
-  return; 
+
+  return;
 }

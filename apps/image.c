@@ -1,4 +1,4 @@
-/* 
+/*
 
 Linux GUI for the
 Spectral Instruments 3097 Camera Interface
@@ -43,22 +43,50 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <pthread.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 
 
 #include "si3097.h"
 #include "si_app.h"
+#include "lib.h"
+#include "demux.h"
+#include "uart.h"
 
 #define BOX_PACK 0
 #define FRAME_SPACE 3
 
-void *fun_fill( void * );
-inline unsigned char false_color_red( unsigned short );
-inline unsigned char false_color_green( unsigned short );
-inline unsigned char false_color_blue( unsigned short );
 
-int fill_pix_with_data( struct SI_CAMERA*, unsigned short *, int);
-static void dma_go( struct SI_CAMERA *, int );
-void *image_fill( void *);
+gboolean dma_poll( gpointer *dp );
+void destroy( GtkWidget *widget, gpointer   data );
+void do_abort( GtkWidget *widget, gpointer   data );
+void dma_done( gpointer a, gint b, GdkInputCondition condition );
+void *image_fill( void *v );
+void dma_go( struct SI_CAMERA *head, int cmd );
+void do_start( GtkWidget *widget, gpointer   data );
+void do_params( GtkWidget *widget, gpointer   data );
+void do_controls( GtkWidget *widget, gpointer   data );
+void do_load( GtkWidget *widget, void *dp );
+int store_filename (GtkWidget *widget, void *dp);
+void do_save( GtkWidget *widget, void *dp);
+void fun_fill( void *dp );
+void fill_pix_with_data( struct SI_CAMERA *head, unsigned short *data,
+                         int side );
+void scale_data( unsigned short *data, int n );
+
+static inline unsigned char false_color_red( unsigned short dp )
+{
+  return dp>>8;
+}
+
+static inline unsigned char false_color_green( unsigned short dp )
+{
+  return dp>>8;
+}
+
+static inline unsigned char false_color_blue( unsigned short dp )
+{
+  return dp>>8;
+}
 
 /*
 gboolean timeout( dp )
@@ -70,13 +98,12 @@ gpointer *dp;
   if( head->fill_done ) {
     gtk_image_set_from_pixbuf( GTK_IMAGE(head->image), head->pix );
     return 0;
-  } else 
+  } else
     return 1;
 }
 */
 
-gboolean dma_poll( dp )
-gpointer *dp;
+gboolean dma_poll( gpointer *dp )
 {
   struct SI_CAMERA *head;
 
@@ -96,12 +123,12 @@ gpointer *dp;
   }
 }
 
-static void destroy( GtkWidget *widget, gpointer   data )
+void destroy( GtkWidget *widget, gpointer   data )
 {
   gtk_main_quit ();
 }
 
-static void do_abort( GtkWidget *widget, gpointer   data )
+void do_abort( GtkWidget *widget, gpointer   data )
 {
   struct SI_CAMERA *head;
 
@@ -110,19 +137,15 @@ static void do_abort( GtkWidget *widget, gpointer   data )
   head->fraction = 0.0;
   head->dma_aborted = 1;
 
-  if( ioctl( head->fd, SI_IOCTL_DMA_ABORT, NULL )) 
+  if( ioctl( head->fd, SI_IOCTL_DMA_ABORT, NULL ))
     perror("dma_abort");
 
-  
+
 }
 
-static void dma_done(a, b, condition)
-gpointer a;
-gint b;
-GdkInputCondition condition;
+void dma_done( gpointer a, gint b, GdkInputCondition condition )
 {
   struct SI_CAMERA *head;
-  int contin;
 
   if( condition != GDK_INPUT_READ )
     return;
@@ -162,7 +185,8 @@ GdkInputCondition condition;
     if( head->fill )
       pthread_join( head->fill, NULL ); /* must be done before flip */
 
-    camera_demux_gen( head->flip_data, head->ptr, head->side, serlen, parlen );
+    si_camera_demux_gen( head->flip_data, head->ptr, head->side,
+                         serlen, parlen );
 
     printf("dma_done, transferred %d\n", head->dma_status.transferred );
     pthread_create(&head->fill, NULL, image_fill, head );
@@ -173,7 +197,7 @@ GdkInputCondition condition;
   } else   {
     double frac;
 //    printf("dma_wakeup, so far transferred %d\n", head->dma_status.transferred);
-    frac = (double)head->dma_status.transferred / 
+    frac = (double)head->dma_status.transferred /
            (double)head->dma_config.total;
     gtk_progress_bar_set_fraction( GTK_PROGRESS_BAR(head->bar),frac);
     gtk_progress_bar_set_text( GTK_PROGRESS_BAR(head->bar), "DMA Active" );
@@ -181,24 +205,21 @@ GdkInputCondition condition;
 }
 
 
-void *image_fill( v )
-void *v;
+void *image_fill( void *v )
 {
   struct SI_CAMERA *head;
 
   printf("start image fill\n");
   head = (struct SI_CAMERA *)v;
- 
+
   scale_data( head->flip_data, head->side );
-  fill_pix_with_data( head, head->flip_data, head->side ); 
+  fill_pix_with_data( head, head->flip_data, head->side );
   gtk_image_set_from_pixbuf( GTK_IMAGE(head->image), head->pix );
   printf("finished image fill\n");
   pthread_exit(NULL);
 }
 
-static void dma_go( head, cmd)
-struct SI_CAMERA *head;
-int cmd;
+void dma_go( struct SI_CAMERA *head, int cmd )
 {
 
   head->dma_aborted = 0;
@@ -216,19 +237,19 @@ int cmd;
   gtk_progress_bar_set_text( GTK_PROGRESS_BAR(head->bar), "DMA active" );
   gtk_progress_bar_set_fraction( GTK_PROGRESS_BAR(head->bar),0.05);
 
-  head->dma_done_handle = gdk_input_add( head->fd, GDK_INPUT_READ, 
+  head->dma_done_handle = gdk_input_add( head->fd, GDK_INPUT_READ,
    (GdkInputFunction)dma_done, head );
 
   if( ioctl( head->fd, SI_IOCTL_DMA_START, &head->dma_status )<0 ){
     perror("dma start");
     return;
   }
-  send_command_yn( head->fd, cmd );
+  si_send_command_yn( head->fd, cmd );
 
 //  g_timeout_add( 200, dma_poll, head );
 }
 
-static void do_start( GtkWidget *widget, gpointer   data )
+void do_start( GtkWidget *widget, gpointer   data )
 {
   struct SI_CAMERA *head;
 
@@ -236,26 +257,19 @@ static void do_start( GtkWidget *widget, gpointer   data )
   dma_go( data, head->command );
 }
 
-static void do_params( GtkWidget *widget, gpointer   data )
+void do_params( GtkWidget *widget, gpointer   data )
 {
-  show_param( data );
+  uart_show_param( data );
 }
 
-static void do_controls( GtkWidget *widget, gpointer   data )
+void do_controls( GtkWidget *widget, gpointer   data )
 {
-  show_control( data );
+  uart_show_control( data );
 }
 
-static void do_load( widget, dp )
-GtkWidget *widget;
-void *dp;
+void do_load( GtkWidget *widget, void *dp )
 {
   GtkWidget *dialog;
-  int ix;
-  char *s;
-  char *delim = " \t\n";
-  FILE *fd;
-  char buf[256];
   struct SI_CAMERA *head;
   struct stat file_stat;
 
@@ -275,7 +289,7 @@ void *dp;
     gtk_widget_destroy (dialog);
     printf("opening %s\n", filename );
     data = ( unsigned short *)malloc( 4096*4096*2);
-    
+
     stat( filename, &file_stat );
     if( file_stat.st_size == 4096*4096*2 )
       side = 4096;
@@ -295,7 +309,7 @@ void *dp;
       gtk_image_set_from_pixbuf( GTK_IMAGE(head->image), head->pix );
       printf("done loading %s\n", filename );
     }
- 
+
     free(data);
     close(fd);
     g_free (filename);
@@ -306,67 +320,63 @@ void *dp;
 
 /* get the chose filename */
 
-store_filename (GtkWidget *widget, void *dp)
+int store_filename (GtkWidget *widget, void *dp)
 {
   int fd, n;
   struct SI_CAMERA *head;
- 
+
   head = (struct SI_CAMERA *)dp;
 
   head->fname = (char *)gtk_file_selection_get_filename(
     GTK_FILE_SELECTION(head->file_widget));
 
-  if((fd = open( head->fname, O_RDWR|O_CREAT, 0666))>=0) 
-    if( (n = write(fd, head->flip_data, 4096*4096*2 ))<0) {
-        printf("failed to write\n");
-  } else 
+  if((fd = open( head->fname, O_RDWR|O_CREAT, 0666))<0) {
     printf("cant open filename: %s\n", head->fname);
+    return -1;
+  }
+  if( (n = write(fd, head->flip_data, 4096*4096*2 ))<0) {
+    printf("failed to write\n");
+    return -1;
+  }
 
   return 0;
 }
 
-static void do_save( widget, dp )
-GtkWidget *widget;
-void *dp;
+void do_save( GtkWidget *widget, void *dp)
 {
-  GtkWidget *dialog;
-  time_t tm;
-  FILE *fd;
-  int i;
-  char *lab;
-  struct SI_CAMERA *head;
+  struct SI_CAMERA *head = dp;
 
    /* Create the selector */
-   
-   head->file_widget = gtk_file_selection_new 
+
+   head->file_widget = gtk_file_selection_new
      ("Please select a file for saving.");
-   
+
    g_signal_connect (GTK_FILE_SELECTION (head->file_widget)->ok_button,
                      "clicked", G_CALLBACK (store_filename), head);
-   			   
+
    /* Ensure that the dialog box is destroyed when the user clicks a button. */
-   
+
    g_signal_connect_swapped (GTK_FILE_SELECTION (head->file_widget)->ok_button,
                              "clicked",
-                             G_CALLBACK (gtk_widget_destroy), 
+                             G_CALLBACK (gtk_widget_destroy),
                              head->file_widget);
 
    g_signal_connect_swapped (GTK_FILE_SELECTION (head->file_widget)->cancel_button,
                              "clicked",
                              G_CALLBACK (gtk_widget_destroy),
-                             head->file_widget); 
-   
+                             head->file_widget);
+
    /* Display that dialog */
-   
+
    gtk_widget_show (head->file_widget);
 }
 
 int main( int argc, char *argv[] )
 {
-  int i, fd;
-  GtkWidget *window, *vbox, *frame, *hbox, *image, *but;
+  int fd;
+  GtkWidget *window, *vbox, *hbox, *image, *but;
   GtkWidget *vbox2, *align;
-  
+
   GdkPixbuf *pix, *logo;
   GtkWidget *scroll, *bar;
   struct SI_CAMERA *head;
@@ -381,10 +391,10 @@ int main( int argc, char *argv[] )
   fd = -1;
   head->fd = fd;
   if( fd >= 0 ) {
-    load_camera_cfg( head, "Test.cfg" );
-    init_com( fd, 57600, 0, 8, 1, 9000 ); /* setup uart for camera */
+    si_load_camera_cfg( head, "Test.cfg" );
+    si_init_com( fd, 57600, 0, 8, 1, 9000 ); /* setup uart for camera */
   }
-  
+
   window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
 
   g_signal_connect (G_OBJECT (window), "destroy",
@@ -431,7 +441,7 @@ int main( int argc, char *argv[] )
   gtk_box_pack_start(GTK_BOX(vbox2),bar,TRUE,TRUE,0);
   gtk_progress_bar_set_text( GTK_PROGRESS_BAR(bar), "DMA Not active");
   gtk_widget_show(bar);
-  
+
   hbox = gtk_hbox_new(FALSE,0);
   gtk_box_pack_start(GTK_BOX(vbox2),hbox,TRUE,TRUE,0);
   gtk_widget_show (hbox);
@@ -449,7 +459,7 @@ int main( int argc, char *argv[] )
   hbox = gtk_hbox_new(FALSE,0);
   gtk_box_pack_start(GTK_BOX(vbox2),hbox,TRUE,TRUE,0);
   gtk_widget_show (hbox);
-  
+
   but = gtk_button_new_with_label( "Controls" );
   g_signal_connect (G_OBJECT (but), "clicked", G_CALLBACK (do_controls), head );
   gtk_box_pack_start(GTK_BOX(hbox),but,TRUE,TRUE,0);
@@ -470,11 +480,11 @@ int main( int argc, char *argv[] )
   gtk_box_pack_start(GTK_BOX(hbox),but,TRUE,TRUE,0);
   gtk_widget_show (but);
 
-  setup_cmd_dat( head ); /* setup the parameter structures */
+  uart_setup_cmd_dat( head ); /* setup the parameter structures */
 
   if( fd >= 0 ) {
-    param_load_all( head );
-    config_dma( NULL, head);
+    uart_param_load_all( head );
+    uart_config_dma( NULL, head);
   }
 
   gtk_main();
@@ -482,14 +492,12 @@ int main( int argc, char *argv[] )
 
 /* just to see something pretty */
 
-void *fun_fill( dp )
-void *dp;
+void fun_fill( void *dp )
 {
   struct SI_CAMERA *head;
   int stride;
   int width, height, n_channels, row, col;
   guchar *pixels, *p;
-  int r;
   GdkPixbuf *pix;
 
   head = (struct SI_CAMERA *)dp;
@@ -515,7 +523,6 @@ void *dp;
     for( col=0; col<width; col++ ) {
 //      usleep(100);
       head->fraction = (double)(row  * width + col)/(height*width) ;
-      r = rand();
       p = pixels + col * stride + row * n_channels;
       p[0] = (((int)(256* (double)col/(double)width )) & 0xff);  /* red */
       p[1] = (((int)(256* (double)row/(double)width )) & 0xff);  /* green */
@@ -526,21 +533,17 @@ void *dp;
   }
   head->fraction = (double)1.0;
   head->dma_active = 0;
-  return NULL;
 }
 
 
-fill_pix_with_data( head, data, side )
-struct SI_CAMERA *head;
-unsigned short *data;
-int side;
+void fill_pix_with_data( struct SI_CAMERA *head, unsigned short *data,
+                         int side )
 {
   int stride;
   int width, height, n_channels, row, col;
   guchar *pixels, *p;
-  int r;
   GdkPixbuf *pix;
-  unsigned short dp, max;
+  unsigned short dp;
 
   head->dma_active = 1;
   head->fraction = 0.0;
@@ -573,27 +576,7 @@ int side;
 }
 
 
-inline unsigned char false_color_red( dp )
-unsigned short dp;
-{
-  return dp>>8;
-}
-
-inline unsigned char false_color_green( dp )
-unsigned short dp;
-{
-  return dp>>8;
-}
-
-inline unsigned char false_color_blue( dp )
-unsigned short dp;
-{
-  return dp>>8;
-}
-
-scale_data( data, n )
-unsigned short *data;
-int n;
+void scale_data( unsigned short *data, int n )
 {
   int tot, i;
   unsigned short max;

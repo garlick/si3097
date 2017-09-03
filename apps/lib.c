@@ -1,4 +1,4 @@
-/* 
+/*
 
 Library support code for the
 Spectral Instruments 3097 Camera Interface
@@ -26,25 +26,20 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <fcntl.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
 
 #include "si3097.h"
 #include "si_app.h"
+#include "lib.h"
 
 
 #define CHUNK 100         //Not sure how big this should be, but 100 seems safe
 #define ABUF_SIZE 10000
 
-int sendfile( int fd, int, char *);
-void  init_com( int, int, int, int, int, int  );
-void  send_break( int, int );
-struct CFG_ENTRY *find_readout( struct SI_CAMERA *, char *);
-
 /* send a file to the UART */
 
-int sendfile( fd, breaktime, filename )
-int fd;
-int breaktime;
-char *filename;
+int si_sendfile( int fd, int breaktime, char *filename )
 {
   FILE  *dbgptr;
   FILE  *inpointer;
@@ -64,37 +59,37 @@ char *filename;
   fflush(dbgptr);
   fprintf(dbgptr, "FileName: %s breaktime: %d\n",filename, breaktime);
   fflush(dbgptr);
-  
-  if (fd < 0 ) // do nothing if device not open 
+
+  if (fd < 0 ) // do nothing if device not open
     return(-1);
-  
+
   fprintf(dbgptr, "bIsrOk\n");
   fflush(dbgptr);
-  
+
   if(!(inpointer = fopen(filename,"rb"))) {
 
-    fprintf(dbgptr, "inpointer: %x\n", inpointer);
+    fprintf(dbgptr, "inpointer: %p\n", inpointer);
     fflush(dbgptr);
-  
+
     return(-1);
-  } 
+  }
 
   fprintf(dbgptr, "File opened \n");
   fflush(dbgptr);
-  fprintf(dbgptr, "abuffer: %x  bbuffer: %x \n", abuffer, bbuffer);
+  fprintf(dbgptr, "abuffer: %p  bbuffer: %p \n", abuffer, bbuffer);
   fflush(dbgptr);
-    
+
   i = 0;
   rewind(inpointer);
   while(!feof(inpointer))
   {
     if (i<ABUF_SIZE)
       abuffer[i++] = (unsigned char )fgetc(inpointer);
-    
+
   }
   i--;  //decrement to get rid of eof character
   fclose(inpointer);
-  
+
   fprintf(dbgptr, "File read %d bytes \n", i);
   fflush(dbgptr);
 
@@ -105,17 +100,17 @@ char *filename;
     k = 0;
     j = 0;
 
-    send_break (fd, breaktime);
+    si_send_break (fd, breaktime);
     usleep(50000);
-    send_break (fd, breaktime);
+    si_send_break (fd, breaktime);
     usleep(50000);
-    clear_buffer(fd);
+    si_clear_buffer(fd);
     usleep(50000);
 
     for(i=0;i<chunk;i++)
       bbuffer[i] = abuffer[i+(j*chunk)];
-    
-    if( write( fd, bbuffer, chunk ) != chunk ) { //send and wait 
+
+    if( write( fd, bbuffer, chunk ) != chunk ) { //send and wait
       perror("UART write\n");
       fclose(inpointer);
       fclose(dbgptr);
@@ -157,7 +152,7 @@ char *filename;
       for(i=0;i<chunk;i++) {
         bbuffer[i] = abuffer[i+(j*chunk)];
       }
-      if( write( fd, bbuffer, chunk ) != chunk ) { //send and wait 
+      if( write( fd, bbuffer, chunk ) != chunk ) { //send and wait
         perror("UART write\n");
         break;
       }
@@ -179,10 +174,10 @@ char *filename;
     }
 
     //Send the remainder of the data
-    for(i=0;i<d.rem;i++) 
+    for(i=0;i<d.rem;i++)
       bbuffer[i] = abuffer[i+(j*chunk)];
 
-    if( write( fd, bbuffer, d.rem ) != d.rem ) { //send and wait 
+    if( write( fd, bbuffer, d.rem ) != d.rem ) { //send and wait
       perror("UART write\n");
       break;
     }
@@ -211,14 +206,14 @@ char *filename;
 
 //  printf ("Returning with %d as retries\n", tries);
 
-  if(!tries) 
+  if(!tries)
     return(3); //If there are data errors, baud rate might be wrong
-  else 
+  else
     return(0); //It worked!
-}   
+}
 
-void  init_com( fd, baud, parity, bits, stopbits, buffersize )
-int fd, baud, parity, bits, stopbits, buffersize;
+void si_init_com( int fd, int baud, int parity, int bits,
+                  int stopbits, int buffersize )
 {
   struct SI_SERIAL_PARAM serial;
 
@@ -233,30 +228,28 @@ int fd, baud, parity, bits, stopbits, buffersize;
 
   serial.flags = SI_SERIAL_FLAGS_BLOCK;
   serial.timeout = 1000;
-  
+
   if( ioctl(fd, SI_IOCTL_SET_SERIAL, &serial))
-    perror("init_comm");
-  
+    perror("si_init_comm");
+
   return;
 }
 
 
-int send_command( fd, cmd )
-int fd;
-int cmd;
+int si_send_command( int fd, int cmd )
 {
   int  ret;
 
   if( fd < 0 )
     return 0;
 
-  clear_buffer(fd);    
-  ret = send_char(fd, cmd);
+  si_clear_buffer(fd);
+  ret = si_send_char(fd, cmd);
 
   return (ret);
 }
 
-int clear_buffer(fd) 
+int si_clear_buffer( int fd )
 {
   if( ioctl( fd, SI_IOCTL_SERIAL_CLEAR, 0 ))
     return -1;
@@ -264,9 +257,7 @@ int clear_buffer(fd)
     return 0;
 }
 
-int send_char(fd, data) 
-int fd;
-int data;
+int si_send_char( int fd, int data )
 {
   unsigned char wbyte, rbyte;
   int n;
@@ -292,8 +283,7 @@ int data;
     return 0;
 }
 
-int receive_char(fd) 
-int fd;
+int si_receive_char( int fd )
 {
   unsigned char rbyte;
   int n;
@@ -311,10 +301,7 @@ int fd;
 
 /* read n bigendian integers and return it */
 
-int receive_n_ints( fd, n, data )
-int fd;
-int n;
-int *data;
+int si_receive_n_ints( int fd, int n, int *data )
 {
   int len, i;
   int ret;
@@ -330,14 +317,11 @@ int *data;
     return -1;
 
   for( i=0; i<n; i++ )
-    swapl(&data[i]);
+    si_swapl(&data[i]);
   return 0;
 }
 
-int send_n_ints( fd, n, data )
-int fd;
-int n;
-int *data;
+int si_send_n_ints( int fd, int n, int *data )
 {
   int len, i;
   int *d;
@@ -346,7 +330,7 @@ int *data;
   d = (int *)malloc( len );
   memcpy( d, data, len );
   for( i=0; i<n; i++ )
-    swapl(&d[i]);
+    si_swapl(&d[i]);
 
   if( (i = write( fd, d, len )) != len )
     return -1;
@@ -364,8 +348,7 @@ int *data;
 
 /* swap 4 byte integer */
 
-int swapl( d )
-int *d;
+void si_swapl( int *d )
 {
   union {
     int i;
@@ -386,12 +369,11 @@ int *d;
 }
 
 
-int expect_yn( fd )
-int fd;
+int si_expect_yn( int fd )
 {
   int got;
 
-  if( (got = receive_char(fd)) < 0 )
+  if( (got = si_receive_char(fd)) < 0 )
    return -1;
 
   if( got != 'Y' && got != 'N')
@@ -401,25 +383,20 @@ int fd;
 }
 
 
-void  send_break(fd, ms)
-int fd;
-int ms;
+void si_send_break( int fd, int ms )
 {
   if( ioctl(fd, SI_IOCTL_SERIAL_BREAK, &ms))
     perror("send break");
-  return;
 }
 
 /* parse the cfg file into a SI_CAMERA structure */
 
-int load_camera_cfg( c, fname )
-struct SI_CAMERA *c;
-char *fname;
+int si_load_camera_cfg( struct SI_CAMERA *c, char *fname )
 {
 
-  load_cfg( c->e_status, fname, "SP" );
-  load_cfg( c->e_readout, fname, "RFP" );
-  load_cfg( c->e_config, fname, "CP" );
+  si_load_cfg( c->e_status, fname, "SP" );
+  si_load_cfg( c->e_readout, fname, "RFP" );
+  si_load_cfg( c->e_config, fname, "CP" );
   return 0;
 }
 
@@ -431,10 +408,7 @@ SP2="Not Used"
 
 */
 
-int load_cfg( e, fname, var )
-struct CFG_ENTRY **e;
-char *fname;
-char *var;
+int si_load_cfg( struct CFG_ENTRY **e, char *fname, char *var )
 {
   int len, varlen, index, pindex;
   FILE *fd;
@@ -460,12 +434,12 @@ char *var;
        entry->index = index;
        entry->cfg_string = (char *)malloc( len );
        strcpy( entry->cfg_string, buf );
-       parse_cfg_string( entry );
+       si_parse_cfg_string( entry );
        if( index!=pindex || index > 32 ) {
          printf("CFG error\n");
          index = pindex;
        }
-      
+
        e[pindex] = entry; /* warning here no bounds check */
        pindex++;
        if( pindex >= 32 )
@@ -474,12 +448,12 @@ char *var;
   }
 
   fclose(fd);
+  return 0;
 }
 
 /* fill in all the parameters from the cfg_string */
 
-parse_cfg_string( entry )
-struct CFG_ENTRY *entry;
+int si_parse_cfg_string( struct CFG_ENTRY *entry )
 {
   char *delim = "=\",\n\r";
   char *s;
@@ -488,10 +462,10 @@ struct CFG_ENTRY *entry;
   unsigned int mask;
 
   strcpy( buf, entry->cfg_string );
-  if( !(s = strtok( buf, delim ))) 
+  if( !(s = strtok( buf, delim )))
     return -1;
 
-  if( !(s = strtok( NULL, delim ))) 
+  if( !(s = strtok( NULL, delim )))
     return -1;
 
   entry->type = atoi(s);
@@ -499,11 +473,11 @@ struct CFG_ENTRY *entry;
     return 0;
 
 
-  if( !(s = strtok( NULL, delim ))) 
+  if( !(s = strtok( NULL, delim )))
     return -1;
   entry->security = atoi(s);
 
-  if( !(s = strtok( NULL, delim ))) 
+  if( !(s = strtok( NULL, delim )))
     return -1;
   entry->name = malloc(strlen(s)+1);
   strcpy( entry->name, s );
@@ -511,14 +485,14 @@ struct CFG_ENTRY *entry;
 
   switch( entry->type ) {
     case CFG_TYPE_INPUTD:
-      if( !(s = strtok( NULL, delim ))) 
+      if( !(s = strtok( NULL, delim )))
         return -1;
       entry->u.iobox.min = atoi(s);
-      if( !(s = strtok( NULL, delim ))) 
+      if( !(s = strtok( NULL, delim )))
         return -1;
       entry->u.iobox.max = atoi(s);
 
-      if( !(s = strtok( NULL, delim ))) 
+      if( !(s = strtok( NULL, delim )))
         return -1;
       entry->u.iobox.units = malloc(strlen(s)+1);
       strcpy( entry->u.iobox.units, s );
@@ -529,20 +503,20 @@ struct CFG_ENTRY *entry;
       }
       entry->u.iobox.mult = atof(s);
 
-      if( !(s = strtok( NULL, delim ))) 
+      if( !(s = strtok( NULL, delim )))
         return -1;
       entry->u.iobox.offset = atof(s);
 
-      if( !(s = strtok( NULL, delim ))) 
+      if( !(s = strtok( NULL, delim )))
         return -1;
       entry->u.iobox.status = atoi(s);
 
       break;
     case CFG_TYPE_DROPD:
-      if( !(s = strtok( NULL, delim ))) 
+      if( !(s = strtok( NULL, delim )))
         return -1;
       min = entry->u.drop.min = atoi(s);
-      if( !(s = strtok( NULL, delim ))) 
+      if( !(s = strtok( NULL, delim )))
         return -1;
       max = entry->u.drop.max = atoi(s);
       tot = max - min + 1;
@@ -551,7 +525,7 @@ struct CFG_ENTRY *entry;
       entry->u.drop.list = (char **)malloc( sizeof(char *)*tot);
       bzero( entry->u.drop.list, sizeof(char *)*tot);
       for( i=0; i<tot; i++ ){
-        if( !(s = strtok( NULL, delim ))) 
+        if( !(s = strtok( NULL, delim )))
           return -1;
         entry->u.drop.list[i] = (char *)malloc( strlen(s)+1);
         strcpy( entry->u.drop.list[i], s );
@@ -559,7 +533,7 @@ struct CFG_ENTRY *entry;
 
       break;
     case CFG_TYPE_BITF:
-      if( !(s = strtok( NULL, delim ))) 
+      if( !(s = strtok( NULL, delim )))
         return -1;
       mask = entry->u.bitf.mask = atoi(s);
       tot = 0;
@@ -577,17 +551,17 @@ struct CFG_ENTRY *entry;
       }
       break;
   }
+  return 0;
 }
 
 /*
-  malloc a new name string from the third param 
+  malloc a new name string from the third param
 
 SP0="1,2,CCD Temperature,0,4095,°C,0.1,-273.15,1"
 
 */
 
-char *name_cfg(cfg)
-char *cfg;
+char *si_name_cfg( char *cfg )
 {
   char buf[256];
   char *delim = ",\n";
@@ -608,15 +582,13 @@ char *cfg;
   return ret;
 }
 
-send_command_yn(fd, data )
-int fd;
-int data;
+void si_send_command_yn( int fd, int data )
 {
   int ex;
 
-  send_command(fd, data);
+  si_send_command(fd, data);
 
-  ex = expect_yn( fd );
+  ex = si_expect_yn( fd );
   if( ex < 0  )
     printf("error expected Y/N uart\n");
   else if (ex)
@@ -627,9 +599,7 @@ int data;
 
 /* look for readout entries in setfile, load them and set into camera */
 
-setfile_readout( c, file )
-struct SI_CAMERA *c;
-char *file;
+int si_setfile_readout( struct SI_CAMERA *c, char *file )
 {
   FILE *fd;
   char *delim = "=\n";
@@ -642,22 +612,21 @@ char *file;
   }
 
   while( fgets( buf, 256, fd )) {
-    if( !(cfg = find_readout( c, buf )))
+    if( !(cfg = si_find_readout( c, buf )))
       continue;
 
     strtok( buf, delim );
-    if( s = strtok( NULL, delim ))
+    if( (s = strtok( NULL, delim)))
       c->readout[ cfg->index ] = atoi(s);
 
   }
 
   fclose(fd);
+  return 0;
 }
 
 
-struct CFG_ENTRY *find_readout( c, name )
-struct SI_CAMERA *c;
-char *name;
+struct CFG_ENTRY *si_find_readout( struct SI_CAMERA *c, char *name )
 {
   struct CFG_ENTRY *cfg;
   int i;
@@ -673,12 +642,9 @@ char *name;
 }
 
 
-sprint_cfg_val_only( buf, cfg, val )
-char *buf;
-struct CFG_ENTRY *cfg;
-int val;
+void si_sprint_cfg_val_only( char *buf, struct CFG_ENTRY *cfg, int val )
 {
-  int i, ix;
+  int ix;
   unsigned int mask;
   double value;
   char *units;
@@ -691,7 +657,7 @@ int val;
           units = cfg->u.iobox.units;
         else
           units = NULL;
-        if( units == NULL || cfg->u.iobox.mult == 1.0 && cfg->u.iobox.offset == 0.0 ) {
+        if( units == NULL || (cfg->u.iobox.mult == 1.0 && cfg->u.iobox.offset == 0.0) ) {
           sprintf(buf, "%d", val);
         } else {
           value = cfg->u.iobox.mult * val + cfg->u.iobox.offset;
