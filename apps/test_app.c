@@ -37,17 +37,33 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 
-int sendfile( int fd, int, char *);
-void  send_break( int, int );
-int print_status(struct SI_CAMERA *);
-int print_readout(struct SI_CAMERA *);
-int print_config(struct SI_CAMERA *);
-int print_mem_changes( short *, int );
-void print_cfg( struct CFG_ENTRY *, int );
+void parse_commands( struct SI_CAMERA *c, char *buf );
+void dma_test( struct SI_CAMERA *c, int cmd, int repeat );
+void write_dma_data( unsigned char *ptr, int total );
+void print_data_len( unsigned char *ptr, int buflen, int total );
+void print_mem_changes( short *ptr, int nwords );
+void expect_y( int fd );
+void print_readout( struct SI_CAMERA *c );
+void print_config( struct SI_CAMERA *c );
+void print_status( struct SI_CAMERA *c );
+void print_cfg( struct CFG_ENTRY *cfg, int val );
+void print_dma_status( struct SI_CAMERA *c );
+void stop_dma( struct SI_CAMERA *c );
+void dma_unmap( struct SI_CAMERA *c );
+void dma_mmap( struct SI_CAMERA *c );
+void crash( struct SI_CAMERA *c );
+void set_config( struct SI_CAMERA *c );
+void print_help( void );
+void camera_image( struct SI_CAMERA *c, int cmd );
+void io_readout( struct SI_CAMERA *c );
+void io_config( struct SI_CAMERA *a );
+int change_cfg( struct SI_CAMERA *c, struct CFG_ENTRY *cfg,
+                int value, int cmd );
+void send_readout( struct SI_CAMERA *c );
+void vmatest( struct SI_CAMERA *c );
+void timeout_test( struct SI_CAMERA *c );
 
-main(argc, argv )
-int argc;
-char *argv[];
+int main(int argc, char *argv[] )
 {
   struct SI_CAMERA *c;
   char buf[256], file[256];
@@ -101,9 +117,7 @@ char *argv[];
   }
 }
 
-parse_commands( c, buf )
-struct SI_CAMERA *c;
-char *buf;
+void parse_commands( struct SI_CAMERA *c, char *buf )
 {
   char *delim = " \t\n";
   char *s;
@@ -255,10 +269,7 @@ char *buf;
    first test of dma for new driver
 */
 
-dma_test( c, cmd, repeat )
-struct SI_CAMERA *c;
-int cmd;
-int repeat;
+void dma_test( struct SI_CAMERA *c, int cmd, int repeat )
 {
   int i, last, nbufs, loop, ret, rnd;
   unsigned char *data1, *data2;
@@ -361,9 +372,7 @@ int repeat;
 
 /* look at data and guess how much data was transferred */
 
-write_dma_data( ptr, total )
-unsigned char *ptr;
-int total;
+void write_dma_data( unsigned char *ptr, int total )
 {
   FILE *fd;
   int tmm;
@@ -381,9 +390,7 @@ int total;
   printf("wrote %d bytes to %s\n", total, buf );
 }
 
-print_data_len( ptr, buflen, total )
-unsigned char *ptr;
-int total;
+void print_data_len( unsigned char *ptr, int buflen, int total )
 {
   int nbufs, i, j, ix, ct;
   unsigned char targ;
@@ -413,9 +420,7 @@ int total;
    This printout shows that.
 */
 
-print_mem_changes( ptr, nwords )
-short *ptr;
-int nwords;
+void print_mem_changes( short *ptr, int nwords )
 {
   int i, cr;
   short last;
@@ -438,16 +443,14 @@ int nwords;
 }
 
 
-expect_y( fd )
-int fd;
+void expect_y( int fd )
 {
   if( si_expect_yn(fd) != 1 )
     printf("ERROR expected yes got no from uart\n");
 }
 
 
-print_readout(c )
-struct SI_CAMERA *c;
+void print_readout( struct SI_CAMERA *c )
 {
   int i;
   struct CFG_ENTRY *cfg;
@@ -461,8 +464,7 @@ struct SI_CAMERA *c;
 }
 
 
-print_config(c)
-struct SI_CAMERA *c;
+void print_config( struct SI_CAMERA *c )
 {
   int i;
   struct CFG_ENTRY *cfg;
@@ -475,8 +477,7 @@ struct SI_CAMERA *c;
   }
 }
 
-print_status(c)
-struct SI_CAMERA *c;
+void print_status( struct SI_CAMERA *c )
 {
   struct CFG_ENTRY *cfg;
   int i;
@@ -490,9 +491,7 @@ struct SI_CAMERA *c;
 }
 
 
-void print_cfg( cfg, val )
-struct CFG_ENTRY *cfg;
-int val;
+void print_cfg( struct CFG_ENTRY *cfg, int val )
 {
   int i, ix;
   unsigned int mask;
@@ -529,8 +528,7 @@ int val;
     }
 }
 
-print_dma_status(c)
-struct SI_CAMERA *c;
+void print_dma_status( struct SI_CAMERA *c )
 {
   printf("dma status\n");
   printf("transferred %d\n", c->dma_status.transferred );
@@ -539,8 +537,7 @@ struct SI_CAMERA *c;
   printf("next %d\n",        c->dma_status.next );
 }
 
-stop_dma( c )
-struct SI_CAMERA *c;
+void stop_dma( struct SI_CAMERA *c )
 {
 
   if( ioctl( c->fd, SI_IOCTL_DMA_ABORT, &c->dma_status )<0 ) {
@@ -548,8 +545,7 @@ struct SI_CAMERA *c;
   }
 }
 
-dma_unmap( c )
-struct SI_CAMERA *c;
+void dma_unmap( struct SI_CAMERA *c )
 {
   int nbufs;
 
@@ -566,8 +562,7 @@ struct SI_CAMERA *c;
   c->dma_active = 0;
 }
 
-dma_mmap( c )
-struct SI_CAMERA *c;
+void dma_mmap( struct SI_CAMERA *c )
 {
   int nbufs;
 
@@ -584,8 +579,7 @@ struct SI_CAMERA *c;
 
 /* try to crash driver by failing to unmap */
 
-crash(c)
-struct SI_CAMERA *c;
+void crash( struct SI_CAMERA *c )
 {
   int repeat, ret;
   printf("starting crash\n");
@@ -686,8 +680,7 @@ int config_data[] = {
   0,
 };
 
-set_config( c )
-struct SI_CAMERA *c;
+void set_config( struct SI_CAMERA *c )
 {
   printf("sending default configuration parameters\n");
   memcpy( (int *)&c->config,  config_data, sizeof(int)*32 );
@@ -696,7 +689,7 @@ struct SI_CAMERA *c;
   expect_y( c->fd );
 }
 
-print_help()
+void print_help( void )
 {
   printf("Comands\n" );
   printf(" A        -  Open Shutter returns Y/N\n");
@@ -728,9 +721,7 @@ print_help()
   printf("send_readout\n");
 }
 
-camera_image( c, cmd )
-struct SI_CAMERA *c;
-int cmd;
+void camera_image( struct SI_CAMERA *c, int cmd )
 {
   int i, last, nbufs, ret;
   unsigned short *flip;
@@ -811,8 +802,7 @@ int cmd;
   free(flip);
 }
 
-io_readout(c )
-struct SI_CAMERA *c;
+void io_readout( struct SI_CAMERA *c )
 {
   int i;
   struct CFG_ENTRY *cfg;
@@ -826,8 +816,7 @@ struct SI_CAMERA *c;
   }
 }
 
-io_config(c )
-struct SI_CAMERA *c;
+void io_config( struct SI_CAMERA *c )
 {
   int i;
   struct CFG_ENTRY *cfg;
@@ -842,11 +831,8 @@ struct SI_CAMERA *c;
 }
 
 
-int change_cfg( c, cfg, value, cmd )
-struct SI_CAMERA *c;
-struct CFG_ENTRY *cfg;
-int value;
-int cmd;
+int change_cfg( struct SI_CAMERA *c, struct CFG_ENTRY *cfg,
+                int value, int cmd )
 {
   char buf[256];
   int val, ex;
@@ -876,16 +862,14 @@ int cmd;
 
 
 
-send_readout( c )
-struct SI_CAMERA *c;
+void send_readout( struct SI_CAMERA *c )
 {
   si_send_command(c->fd, 'F'); // F    - Send Readout Parameters
   si_send_n_ints( c->fd, 32, (int *)&c->readout );
   si_expect_yn( c->fd );
 }
 
-vmatest(c)
-struct SI_CAMERA *c;
+void vmatest( struct SI_CAMERA *c )
 {
   int nbufs, count;
   unsigned short *ptr;
@@ -923,8 +907,7 @@ struct SI_CAMERA *c;
   }
 }
 
-timeout_test(c)
-struct SI_CAMERA *c;
+void timeout_test( struct SI_CAMERA *c )
 {
   int nbufs, count, serlen, parlen, tot, ret, repeat;
   unsigned short *ptr;
