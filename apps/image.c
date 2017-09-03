@@ -1,4 +1,4 @@
-/* 
+/*
 
 Linux GUI for the
 Spectral Instruments 3097 Camera Interface
@@ -70,7 +70,7 @@ gpointer *dp;
   if( head->fill_done ) {
     gtk_image_set_from_pixbuf( GTK_IMAGE(head->image), head->pix );
     return 0;
-  } else 
+  } else
     return 1;
 }
 */
@@ -110,10 +110,10 @@ static void do_abort( GtkWidget *widget, gpointer   data )
   head->fraction = 0.0;
   head->dma_aborted = 1;
 
-  if( ioctl( head->fd, SI_IOCTL_DMA_ABORT, NULL )) 
+  if( ioctl( head->fd, SI_IOCTL_DMA_ABORT, NULL ))
     perror("dma_abort");
 
-  
+
 }
 
 static void dma_done(a, b, condition)
@@ -173,7 +173,7 @@ GdkInputCondition condition;
   } else   {
     double frac;
 //    printf("dma_wakeup, so far transferred %d\n", head->dma_status.transferred);
-    frac = (double)head->dma_status.transferred / 
+    frac = (double)head->dma_status.transferred /
            (double)head->dma_config.total;
     gtk_progress_bar_set_fraction( GTK_PROGRESS_BAR(head->bar),frac);
     gtk_progress_bar_set_text( GTK_PROGRESS_BAR(head->bar), "DMA Active" );
@@ -188,9 +188,9 @@ void *v;
 
   printf("start image fill\n");
   head = (struct SI_CAMERA *)v;
- 
+
   scale_data( head->flip_data, head->side );
-  fill_pix_with_data( head, head->flip_data, head->side ); 
+  fill_pix_with_data( head, head->flip_data, head->side );
   gtk_image_set_from_pixbuf( GTK_IMAGE(head->image), head->pix );
   printf("finished image fill\n");
   pthread_exit(NULL);
@@ -216,7 +216,7 @@ int cmd;
   gtk_progress_bar_set_text( GTK_PROGRESS_BAR(head->bar), "DMA active" );
   gtk_progress_bar_set_fraction( GTK_PROGRESS_BAR(head->bar),0.05);
 
-  head->dma_done_handle = gdk_input_add( head->fd, GDK_INPUT_READ, 
+  head->dma_done_handle = gdk_input_add( head->fd, GDK_INPUT_READ,
    (GdkInputFunction)dma_done, head );
 
   if( ioctl( head->fd, SI_IOCTL_DMA_START, &head->dma_status )<0 ){
@@ -275,7 +275,7 @@ void *dp;
     gtk_widget_destroy (dialog);
     printf("opening %s\n", filename );
     data = ( unsigned short *)malloc( 4096*4096*2);
-    
+
     stat( filename, &file_stat );
     if( file_stat.st_size == 4096*4096*2 )
       side = 4096;
@@ -295,7 +295,7 @@ void *dp;
       gtk_image_set_from_pixbuf( GTK_IMAGE(head->image), head->pix );
       printf("done loading %s\n", filename );
     }
- 
+
     free(data);
     close(fd);
     g_free (filename);
@@ -310,16 +310,16 @@ store_filename (GtkWidget *widget, void *dp)
 {
   int fd, n;
   struct SI_CAMERA *head;
- 
+
   head = (struct SI_CAMERA *)dp;
 
   head->fname = (char *)gtk_file_selection_get_filename(
     GTK_FILE_SELECTION(head->file_widget));
 
-  if((fd = open( head->fname, O_RDWR|O_CREAT, 0666))>=0) 
+  if((fd = open( head->fname, O_RDWR|O_CREAT, 0666))>=0)
     if( (n = write(fd, head->flip_data, 4096*4096*2 ))<0) {
         printf("failed to write\n");
-  } else 
+  } else
     printf("cant open filename: %s\n", head->fname);
 
   return 0;
@@ -337,27 +337,27 @@ void *dp;
   struct SI_CAMERA *head;
 
    /* Create the selector */
-   
-   head->file_widget = gtk_file_selection_new 
+
+   head->file_widget = gtk_file_selection_new
      ("Please select a file for saving.");
-   
+
    g_signal_connect (GTK_FILE_SELECTION (head->file_widget)->ok_button,
                      "clicked", G_CALLBACK (store_filename), head);
-   			   
+
    /* Ensure that the dialog box is destroyed when the user clicks a button. */
-   
+
    g_signal_connect_swapped (GTK_FILE_SELECTION (head->file_widget)->ok_button,
                              "clicked",
-                             G_CALLBACK (gtk_widget_destroy), 
+                             G_CALLBACK (gtk_widget_destroy),
                              head->file_widget);
 
    g_signal_connect_swapped (GTK_FILE_SELECTION (head->file_widget)->cancel_button,
                              "clicked",
                              G_CALLBACK (gtk_widget_destroy),
-                             head->file_widget); 
-   
+                             head->file_widget);
+
    /* Display that dialog */
-   
+
    gtk_widget_show (head->file_widget);
 }
 
@@ -366,7 +366,7 @@ int main( int argc, char *argv[] )
   int i, fd;
   GtkWidget *window, *vbox, *frame, *hbox, *image, *but;
   GtkWidget *vbox2, *align;
-  
+
   GdkPixbuf *pix, *logo;
   GtkWidget *scroll, *bar;
   struct SI_CAMERA *head;
@@ -384,7 +384,7 @@ int main( int argc, char *argv[] )
     load_camera_cfg( head, "Test.cfg" );
     init_com( fd, 57600, 0, 8, 1, 9000 ); /* setup uart for camera */
   }
-  
+
   window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
 
   g_signal_connect (G_OBJECT (window), "destroy",
@@ -431,7 +431,7 @@ int main( int argc, char *argv[] )
   gtk_box_pack_start(GTK_BOX(vbox2),bar,TRUE,TRUE,0);
   gtk_progress_bar_set_text( GTK_PROGRESS_BAR(bar), "DMA Not active");
   gtk_widget_show(bar);
-  
+
   hbox = gtk_hbox_new(FALSE,0);
   gtk_box_pack_start(GTK_BOX(vbox2),hbox,TRUE,TRUE,0);
   gtk_widget_show (hbox);
@@ -449,7 +449,7 @@ int main( int argc, char *argv[] )
   hbox = gtk_hbox_new(FALSE,0);
   gtk_box_pack_start(GTK_BOX(vbox2),hbox,TRUE,TRUE,0);
   gtk_widget_show (hbox);
-  
+
   but = gtk_button_new_with_label( "Controls" );
   g_signal_connect (G_OBJECT (but), "clicked", G_CALLBACK (do_controls), head );
   gtk_box_pack_start(GTK_BOX(hbox),but,TRUE,TRUE,0);

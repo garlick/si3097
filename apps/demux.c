@@ -42,9 +42,9 @@ int size;
 
     irow = row - so2;
     icol = col - so2;
-    out[ row*size + col ]             = in[i]; 
+    out[ row*size + col ]             = in[i];
 //    out[ row*size + icol+so2 ]        = in[i+1];
-   
+
 //    out[ (irow+so2)*size + col ]      = in[i+2];
 //    out[ (irow+so2)*size + icol+so2 ] = in[i+3];
 
@@ -71,13 +71,13 @@ int size;
   tot = 0;
   for( row = 0; row < 2046; row++ ) {
     for( col = 0; col < 2047; col++ ) {
-      out[ (row+2)*4096 + (col+1) ]  = in[tot]; 
+      out[ (row+2)*4096 + (col+1) ]  = in[tot];
 
       icol = (2047 - (col+1)) + 2048 ;
       irow = (2046 - (row+1)) + 2048;
-      out[ (row+2)*4096 + icol ]  = in[tot+1]; 
-      out[ irow*4096 + col+1 ]  = in[tot+2]; 
-      out[ irow*4096 + icol ]  = in[tot+3]; 
+      out[ (row+2)*4096 + icol ]  = in[tot+1];
+      out[ irow*4096 + col+1 ]  = in[tot+2];
+      out[ irow*4096 + icol ]  = in[tot+3];
 
       tot+=4;
     }
@@ -105,13 +105,13 @@ int size;
   tot = 0;
   for( row = 0; row < parlen; row++ ) {
     for( col = 0; col < serlen; col++ ) {
-      out[ (row+2)*size + (col+1) ]  = in[tot]; 
+      out[ (row+2)*size + (col+1) ]  = in[tot];
 
       icol = (serlen - (col+1)) + so2 ;
       irow = (parlen - (row+1)) + so2;
-      out[ (row+2)*size + icol ]  = in[tot+1]; 
-      out[ irow*size + col+1 ]  = in[tot+2]; 
-      out[ irow*size + icol ]  = in[tot+3]; 
+      out[ (row+2)*size + icol ]  = in[tot+1];
+      out[ irow*size + col+1 ]  = in[tot+2];
+      out[ irow*size + icol ]  = in[tot+3];
 
       tot+=4;
     }

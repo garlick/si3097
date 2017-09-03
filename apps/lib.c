@@ -1,4 +1,4 @@
-/* 
+/*
 
 Library support code for the
 Spectral Instruments 3097 Camera Interface
@@ -64,37 +64,37 @@ char *filename;
   fflush(dbgptr);
   fprintf(dbgptr, "FileName: %s breaktime: %d\n",filename, breaktime);
   fflush(dbgptr);
-  
-  if (fd < 0 ) // do nothing if device not open 
+
+  if (fd < 0 ) // do nothing if device not open
     return(-1);
-  
+
   fprintf(dbgptr, "bIsrOk\n");
   fflush(dbgptr);
-  
+
   if(!(inpointer = fopen(filename,"rb"))) {
 
     fprintf(dbgptr, "inpointer: %x\n", inpointer);
     fflush(dbgptr);
-  
+
     return(-1);
-  } 
+  }
 
   fprintf(dbgptr, "File opened \n");
   fflush(dbgptr);
   fprintf(dbgptr, "abuffer: %x  bbuffer: %x \n", abuffer, bbuffer);
   fflush(dbgptr);
-    
+
   i = 0;
   rewind(inpointer);
   while(!feof(inpointer))
   {
     if (i<ABUF_SIZE)
       abuffer[i++] = (unsigned char )fgetc(inpointer);
-    
+
   }
   i--;  //decrement to get rid of eof character
   fclose(inpointer);
-  
+
   fprintf(dbgptr, "File read %d bytes \n", i);
   fflush(dbgptr);
 
@@ -114,8 +114,8 @@ char *filename;
 
     for(i=0;i<chunk;i++)
       bbuffer[i] = abuffer[i+(j*chunk)];
-    
-    if( write( fd, bbuffer, chunk ) != chunk ) { //send and wait 
+
+    if( write( fd, bbuffer, chunk ) != chunk ) { //send and wait
       perror("UART write\n");
       fclose(inpointer);
       fclose(dbgptr);
@@ -157,7 +157,7 @@ char *filename;
       for(i=0;i<chunk;i++) {
         bbuffer[i] = abuffer[i+(j*chunk)];
       }
-      if( write( fd, bbuffer, chunk ) != chunk ) { //send and wait 
+      if( write( fd, bbuffer, chunk ) != chunk ) { //send and wait
         perror("UART write\n");
         break;
       }
@@ -179,10 +179,10 @@ char *filename;
     }
 
     //Send the remainder of the data
-    for(i=0;i<d.rem;i++) 
+    for(i=0;i<d.rem;i++)
       bbuffer[i] = abuffer[i+(j*chunk)];
 
-    if( write( fd, bbuffer, d.rem ) != d.rem ) { //send and wait 
+    if( write( fd, bbuffer, d.rem ) != d.rem ) { //send and wait
       perror("UART write\n");
       break;
     }
@@ -211,11 +211,11 @@ char *filename;
 
 //  printf ("Returning with %d as retries\n", tries);
 
-  if(!tries) 
+  if(!tries)
     return(3); //If there are data errors, baud rate might be wrong
-  else 
+  else
     return(0); //It worked!
-}   
+}
 
 void  init_com( fd, baud, parity, bits, stopbits, buffersize )
 int fd, baud, parity, bits, stopbits, buffersize;
@@ -233,10 +233,10 @@ int fd, baud, parity, bits, stopbits, buffersize;
 
   serial.flags = SI_SERIAL_FLAGS_BLOCK;
   serial.timeout = 1000;
-  
+
   if( ioctl(fd, SI_IOCTL_SET_SERIAL, &serial))
     perror("init_comm");
-  
+
   return;
 }
 
@@ -250,13 +250,13 @@ int cmd;
   if( fd < 0 )
     return 0;
 
-  clear_buffer(fd);    
+  clear_buffer(fd);
   ret = send_char(fd, cmd);
 
   return (ret);
 }
 
-int clear_buffer(fd) 
+int clear_buffer(fd)
 {
   if( ioctl( fd, SI_IOCTL_SERIAL_CLEAR, 0 ))
     return -1;
@@ -264,7 +264,7 @@ int clear_buffer(fd)
     return 0;
 }
 
-int send_char(fd, data) 
+int send_char(fd, data)
 int fd;
 int data;
 {
@@ -292,7 +292,7 @@ int data;
     return 0;
 }
 
-int receive_char(fd) 
+int receive_char(fd)
 int fd;
 {
   unsigned char rbyte;
@@ -465,7 +465,7 @@ char *var;
          printf("CFG error\n");
          index = pindex;
        }
-      
+
        e[pindex] = entry; /* warning here no bounds check */
        pindex++;
        if( pindex >= 32 )
@@ -488,10 +488,10 @@ struct CFG_ENTRY *entry;
   unsigned int mask;
 
   strcpy( buf, entry->cfg_string );
-  if( !(s = strtok( buf, delim ))) 
+  if( !(s = strtok( buf, delim )))
     return -1;
 
-  if( !(s = strtok( NULL, delim ))) 
+  if( !(s = strtok( NULL, delim )))
     return -1;
 
   entry->type = atoi(s);
@@ -499,11 +499,11 @@ struct CFG_ENTRY *entry;
     return 0;
 
 
-  if( !(s = strtok( NULL, delim ))) 
+  if( !(s = strtok( NULL, delim )))
     return -1;
   entry->security = atoi(s);
 
-  if( !(s = strtok( NULL, delim ))) 
+  if( !(s = strtok( NULL, delim )))
     return -1;
   entry->name = malloc(strlen(s)+1);
   strcpy( entry->name, s );
@@ -511,14 +511,14 @@ struct CFG_ENTRY *entry;
 
   switch( entry->type ) {
     case CFG_TYPE_INPUTD:
-      if( !(s = strtok( NULL, delim ))) 
+      if( !(s = strtok( NULL, delim )))
         return -1;
       entry->u.iobox.min = atoi(s);
-      if( !(s = strtok( NULL, delim ))) 
+      if( !(s = strtok( NULL, delim )))
         return -1;
       entry->u.iobox.max = atoi(s);
 
-      if( !(s = strtok( NULL, delim ))) 
+      if( !(s = strtok( NULL, delim )))
         return -1;
       entry->u.iobox.units = malloc(strlen(s)+1);
       strcpy( entry->u.iobox.units, s );
@@ -529,20 +529,20 @@ struct CFG_ENTRY *entry;
       }
       entry->u.iobox.mult = atof(s);
 
-      if( !(s = strtok( NULL, delim ))) 
+      if( !(s = strtok( NULL, delim )))
         return -1;
       entry->u.iobox.offset = atof(s);
 
-      if( !(s = strtok( NULL, delim ))) 
+      if( !(s = strtok( NULL, delim )))
         return -1;
       entry->u.iobox.status = atoi(s);
 
       break;
     case CFG_TYPE_DROPD:
-      if( !(s = strtok( NULL, delim ))) 
+      if( !(s = strtok( NULL, delim )))
         return -1;
       min = entry->u.drop.min = atoi(s);
-      if( !(s = strtok( NULL, delim ))) 
+      if( !(s = strtok( NULL, delim )))
         return -1;
       max = entry->u.drop.max = atoi(s);
       tot = max - min + 1;
@@ -551,7 +551,7 @@ struct CFG_ENTRY *entry;
       entry->u.drop.list = (char **)malloc( sizeof(char *)*tot);
       bzero( entry->u.drop.list, sizeof(char *)*tot);
       for( i=0; i<tot; i++ ){
-        if( !(s = strtok( NULL, delim ))) 
+        if( !(s = strtok( NULL, delim )))
           return -1;
         entry->u.drop.list[i] = (char *)malloc( strlen(s)+1);
         strcpy( entry->u.drop.list[i], s );
@@ -559,7 +559,7 @@ struct CFG_ENTRY *entry;
 
       break;
     case CFG_TYPE_BITF:
-      if( !(s = strtok( NULL, delim ))) 
+      if( !(s = strtok( NULL, delim )))
         return -1;
       mask = entry->u.bitf.mask = atoi(s);
       tot = 0;
@@ -580,7 +580,7 @@ struct CFG_ENTRY *entry;
 }
 
 /*
-  malloc a new name string from the third param 
+  malloc a new name string from the third param
 
 SP0="1,2,CCD Temperature,0,4095,°C,0.1,-273.15,1"
 

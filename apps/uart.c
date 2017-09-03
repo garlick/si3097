@@ -1,4 +1,4 @@
-/* 
+/*
 
 UART control code for
 Spectral Instruments 3097 Camera Interface
@@ -122,7 +122,7 @@ void config_dma( GtkWidget *widget, gpointer   data )
     head->dma_config.timeout = 10000;
     head->contin = 1;
     head->command = 'D';
-    
+
   } else {
     bzero( &head->dma_config, sizeof(struct SI_DMA_CONFIG ));
 
@@ -156,8 +156,8 @@ void config_dma( GtkWidget *widget, gpointer   data )
   if( head->dma_config.total % head->dma_config.buflen )
     nbufs += 1;
 
-  if(!(head->ptr = (unsigned short *)mmap( 0, 
-    head->dma_config.buflen*nbufs, 
+  if(!(head->ptr = (unsigned short *)mmap( 0,
+    head->dma_config.buflen*nbufs,
       PROT_READ, MAP_SHARED, head->fd, 0))) {
     perror("mmap");
     return;
@@ -189,7 +189,7 @@ static void config_image( GtkWidget *widget, gpointer data )
     head->dinter.n_cols = atoi(s);
   printf("cols %d\n", head->dinter.n_cols );
 
-  pix = gdk_pixbuf_new( GDK_COLORSPACE_RGB, 0, 8, 
+  pix = gdk_pixbuf_new( GDK_COLORSPACE_RGB, 0, 8,
     head->dinter.n_rows, head->dinter.n_cols);
   if( head->pix )
      g_object_unref( head->pix );
@@ -223,7 +223,7 @@ struct COMMAND_DAT *cmd;
     printf("didnt get a y from uart\n");
 
   ent = cmd->dat;
-  if( !ent ) 
+  if( !ent )
     return;
 
   ret = cmd->data;
@@ -259,7 +259,7 @@ struct COMMAND_DAT *cmd;
 
   len = cmd->len;
   ent = cmd->dat;
-  if( !ent ) 
+  if( !ent )
     return;
 
   ret = cmd->data;
@@ -284,7 +284,7 @@ struct UART_CMD *cmd;
 {
   int fd, yn;
   char text[256];
- 
+
   fd = cmd->head->fd;
   if( send_command( fd, cmd->cmd ) < 0 ) {
     perror("send_command");
@@ -292,8 +292,8 @@ struct UART_CMD *cmd;
   }
   if( cmd->resp ) {
     yn = expect_yn( fd );
-   
-    if( yn == 1 ) 
+
+    if( yn == 1 )
       strcpy(text, "Y" );
     else if ( yn == 0 )
       strcpy(text, "N" );
@@ -314,7 +314,7 @@ struct SI_CAMERA *head;
     gtk_window_activate_focus( GTK_WINDOW(head->param_window) );
     return 0;
   }
-  
+
   for( i=0;i<3; i++ )
     cmd_dat[i].head = head;
 
@@ -331,7 +331,7 @@ struct SI_CAMERA *head;
   gtk_container_add (GTK_CONTAINER (window), hbox);
   gtk_widget_show (hbox);
 
-  frame = gtk_frame_new("Readout Parameters");  
+  frame = gtk_frame_new("Readout Parameters");
   gtk_container_set_border_width (GTK_CONTAINER (frame),FRAME_SPACE);
   gtk_box_pack_start (GTK_BOX (hbox), frame , FALSE, FALSE,BOX_PACK);
   gtk_widget_show (frame);
@@ -344,7 +344,7 @@ struct SI_CAMERA *head;
   build_param_list( &cmd_dat[0], head->e_readout, vbox, 1  );
   gtk_widget_show (vbox);
 
-  frame = gtk_frame_new("Configuration Parameters");  
+  frame = gtk_frame_new("Configuration Parameters");
   gtk_container_set_border_width (GTK_CONTAINER (frame),FRAME_SPACE);
   gtk_box_pack_start (GTK_BOX (hbox), frame , FALSE, FALSE,BOX_PACK);
   gtk_widget_show (frame);
@@ -357,7 +357,7 @@ struct SI_CAMERA *head;
   build_param_list( &cmd_dat[1], head->e_config, vbox, 0  );
   gtk_widget_show (vbox);
 
-  frame = gtk_frame_new("Status Parameters");  
+  frame = gtk_frame_new("Status Parameters");
   gtk_container_set_border_width (GTK_CONTAINER (frame),FRAME_SPACE);
   gtk_box_pack_start (GTK_BOX (hbox), frame , FALSE, FALSE,BOX_PACK);
   gtk_widget_show (frame);
@@ -456,7 +456,7 @@ struct SI_CAMERA *head;
     gtk_window_activate_focus( GTK_WINDOW(head->control_window) );
     return 0;
   }
-  
+
   window = gtk_window_new (GTK_WINDOW_TOPLEVEL);
   head->control_window = window;
 
@@ -470,7 +470,7 @@ struct SI_CAMERA *head;
   gtk_container_add (GTK_CONTAINER (window), bvbox);
   gtk_widget_show (bvbox);
 
-  frame = gtk_frame_new("Controls");  
+  frame = gtk_frame_new("Controls");
   gtk_container_set_border_width (GTK_CONTAINER (frame),FRAME_SPACE);
   gtk_box_pack_start (GTK_BOX (bvbox), frame , TRUE, TRUE, 0);
   gtk_widget_show (frame);
@@ -500,7 +500,7 @@ struct SI_CAMERA *head;
     gtk_widget_show (hbox);
   }
 
-  frame = gtk_frame_new("DMA Parameters");  
+  frame = gtk_frame_new("DMA Parameters");
   gtk_container_set_border_width (GTK_CONTAINER (frame),FRAME_SPACE);
   gtk_box_pack_start (GTK_BOX (bvbox), frame , FALSE, FALSE, 0);
   gtk_widget_show (frame);
@@ -549,7 +549,7 @@ struct SI_CAMERA *head;
   gtk_box_pack_end (GTK_BOX (hbox), head->buflen_e , FALSE, FALSE,BOX_PACK);
   gtk_widget_set_size_request(head->buflen_e,60,-1);
   gtk_widget_show (head->buflen_e);
-  
+
   hbox = gtk_hbox_new(FALSE,0);
   gtk_widget_show (hbox);
   gtk_box_pack_start(GTK_BOX (vbox), hbox , FALSE, FALSE,BOX_PACK);
@@ -564,7 +564,7 @@ struct SI_CAMERA *head;
   gtk_widget_set_size_request(head->timeout_e,60,-1);
   gtk_widget_show (head->timeout_e);
 
-  
+
   hbox = gtk_hbox_new(FALSE,0);
   gtk_widget_show (hbox);
   gtk_box_pack_start(GTK_BOX (vbox), hbox , FALSE, FALSE,BOX_PACK);
@@ -579,7 +579,7 @@ struct SI_CAMERA *head;
 
   gtk_combo_box_append_text( (GtkComboBox *)but, "End of DMA" );
   gtk_combo_box_append_text( (GtkComboBox *)but, "Each nbuf" );
-  gtk_combo_box_set_active ((GtkComboBox *)but, 
+  gtk_combo_box_set_active ((GtkComboBox *)but,
     (head->dma_config.config & SI_DMA_CONFIG_WAKEUP_EACH)!=0 );
   gtk_widget_show (but);
 
@@ -611,7 +611,7 @@ struct SI_CAMERA *head;
                             G_CALLBACK (do_verbose), head);
   gtk_widget_show (but);
 
-//  frame = gtk_frame_new("Image Parameters");  
+//  frame = gtk_frame_new("Image Parameters");
 //  gtk_container_set_border_width (GTK_CONTAINER (frame),FRAME_SPACE);
 //  gtk_box_pack_start (GTK_BOX (bvbox), frame , FALSE, FALSE, 0);
 //  gtk_widget_show (frame);
@@ -627,7 +627,7 @@ struct SI_CAMERA *head;
 //  hbox = gtk_hbox_new(FALSE,0);
 //  gtk_widget_show (hbox);
 //  gtk_box_pack_start(GTK_BOX (vbox), hbox , FALSE, FALSE,BOX_PACK);
-//  
+//
 //
 //  label = gtk_label_new("Interlace Type");
 //  gtk_box_pack_start(GTK_BOX (hbox), label , FALSE, FALSE,BOX_PACK);
@@ -648,7 +648,7 @@ struct SI_CAMERA *head;
 //  gtk_box_pack_end (GTK_BOX (hbox), head->irows_e , FALSE, FALSE,BOX_PACK);
 //  gtk_widget_set_size_request(head->irows_e,60,-1);
 //  gtk_widget_show (head->irows_e);
-  
+
 //  hbox = gtk_hbox_new(FALSE,0);
 //  gtk_widget_show (hbox);
 //  gtk_box_pack_start(GTK_BOX (vbox), hbox , FALSE, FALSE,BOX_PACK);
@@ -661,7 +661,7 @@ struct SI_CAMERA *head;
 //  gtk_widget_set_size_request(head->icols_e,60,-1);
 //  gtk_widget_show (head->icols_e);
 //
-  
+
 ////  but = gtk_button_new_with_label( "Apply to Image" );
 //  g_signal_connect (G_OBJECT (but), "clicked", G_CALLBACK (config_image), head );
 //  gtk_box_pack_start (GTK_BOX (vbox), but , FALSE, FALSE,BOX_PACK);

@@ -1,4 +1,4 @@
-/* 
+/*
 
 app header  for
 Spectral Instruments 3097 Camera Interface
@@ -22,7 +22,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 /*
-  application specific support for the si3097 
+  application specific support for the si3097
   used by test_app,  and gui
 */
 
@@ -38,10 +38,10 @@ typedef void * GdkPixbuf;
 #define SI_READOUT_MAX   32
 #define SI_READSPEED_MAX  8
 
-#define CFG_TYPE_NOTUSED 0 
-#define CFG_TYPE_INPUTD  1 
-#define CFG_TYPE_DROPD   2 
-#define CFG_TYPE_BITF    3 
+#define CFG_TYPE_NOTUSED 0
+#define CFG_TYPE_INPUTD  1
+#define CFG_TYPE_DROPD   2
+#define CFG_TYPE_BITF    3
 
 #define READOUT_SERLEN_IX  1
 #define READOUT_PARLEN_IX  5
@@ -54,7 +54,7 @@ struct CFG_ENTRY {
   int type;
   int security;
 
-  union { 
+  union {
 
     struct IOBOX {
       int min;
@@ -120,7 +120,7 @@ struct SI_CAMERA {
 
   GtkWidget *itype_e; /* deinterlace widgets */
   GtkWidget *icols_e;
-  GtkWidget *irows_e; 
+  GtkWidget *irows_e;
   int dma_done;
   int dma_done_handle;
   int dma_configed;
@@ -128,7 +128,7 @@ struct SI_CAMERA {
 
   int command;
   int contin;
-  GtkWidget *contin_c; 
+  GtkWidget *contin_c;
   GtkWidget *verbose_c;
   GtkWidget *setcmd_c;
   GtkWidget *file_widget;

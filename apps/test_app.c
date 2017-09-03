@@ -1,4 +1,4 @@
-/* 
+/*
 
 Test application for the
 Spectral Instruments 3097 Camera Interface
@@ -30,8 +30,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "si3097.h"
 #include "si_app.h"
 
-/* 
-  low level testout of the si3097 driver 
+/*
+  low level testout of the si3097 driver
 */
 
 
@@ -59,7 +59,7 @@ char *argv[];
 
   strcpy( file, "/dev/si3097a" );
 
-  for( i=1; i<argc; i++ ) { 
+  for( i=1; i<argc; i++ ) {
     if( strcmp( argv[i], "-dev" ) == 0 ) {
       i++;
       if( argv[i] )
@@ -113,11 +113,11 @@ char *buf;
   if( strncasecmp( buf, "sendfile", 8 ) == 0 ) {
     sendfile( c->fd, 250, "2769d.bin" );
   } else if( buf[0] == 'A' ) {
-    send_command_yn(c->fd, 'A');  // A  - Open Shutter  returns Y/N  
+    send_command_yn(c->fd, 'A');  // A  - Open Shutter  returns Y/N
   } else if( buf[0] == 'B' ) {
     send_command_yn(c->fd, 'B');  // B - Close Shutter returns Y/N
   } else if( buf[0] == 'I' ) {
-    send_command(c->fd, 'I');     // I    - Get camera status 
+    send_command(c->fd, 'I');     // I    - Get camera status
     receive_n_ints( c->fd, 16, c->status );
     print_status( c );
     expect_y( c->fd );
@@ -144,7 +144,7 @@ char *buf;
 
   } else if( buf[0] == '0' ) {
     send_command(c->fd, '0');
-    // Abort Readout, aborts an ongoing exposure (camera cannot 
+    // Abort Readout, aborts an ongoing exposure (camera cannot
     // be stopped during actual readout)
   } else if( strncmp( buf, "stopdma", 7 )== 0 ) {
     stop_dma( c );
@@ -239,10 +239,10 @@ char *buf;
            wants DMA active
 
 
-  P    - Eeprom read, causes the EEPROM in the camera to be 
+  P    - Eeprom read, causes the EEPROM in the camera to be
          read into the camera's configuration buffer.
 
-  M    - Eeprom write, causes the camera's configuration buffer 
+  M    - Eeprom write, causes the camera's configuration buffer
          to be copied to the camera's EEPROM.
 
 
@@ -252,7 +252,7 @@ char *buf;
   C    - Image Test, requests a test image
            wants DMA active
 
-   first test of dma for new driver 
+   first test of dma for new driver
 */
 
 dma_test( c, cmd, repeat )
@@ -291,8 +291,8 @@ int repeat;
      if( c->dma_config.total % c->dma_config.buflen )
        nbufs += 1;
 
-      if(!(c->ptr = (unsigned short *)mmap( 0, 
-         c->dma_config.maxever, 
+      if(!(c->ptr = (unsigned short *)mmap( 0,
+         c->dma_config.maxever,
          PROT_READ, MAP_SHARED, c->fd, 0))) {
         perror("mmap");
         return;
@@ -311,8 +311,8 @@ int repeat;
   bzero(&c->dma_status, sizeof(struct SI_DMA_STATUS));
   send_command_yn(c->fd, cmd );
 
-  /* random sleep to test driver */ 
-  
+  /* random sleep to test driver */
+
   rnd = (int)(500000.0*(double)rand()/(double)RAND_MAX);
   usleep( rnd );
 
@@ -341,7 +341,7 @@ int repeat;
       printf("memory mismatch %d\n", loop );
   }
   bzero(data1, 8000000);
-    
+
 
   if( c->dma_status.status & SI_DMA_STATUS_DONE )
     printf("done %d\n", loop );
@@ -376,7 +376,7 @@ int total;
     printf("cant write dma.cam\n");
     return;
   }
-  fwrite(ptr, total, 1, fd ); 
+  fwrite(ptr, total, 1, fd );
   fclose(fd);
   printf("wrote %d bytes to %s\n", total, buf );
 }
@@ -389,7 +389,7 @@ int total;
   unsigned char targ;
 
   nbufs = total/ buflen;
-  if( total & buflen ) 
+  if( total & buflen )
    nbufs += 1;
 
   for( i=nbufs-1; i>=0; i-- ) {
@@ -446,7 +446,7 @@ int fd;
 }
 
 
-print_readout(c ) 
+print_readout(c )
 struct SI_CAMERA *c;
 {
   int i;
@@ -485,7 +485,7 @@ struct SI_CAMERA *c;
   for( i=0; i< SI_STATUS_MAX ; i++ ) {
     if( !(cfg = c->e_status[i]))
       break;
-    print_cfg( cfg, c->status[i] ); 
+    print_cfg( cfg, c->status[i] );
   }
 }
 
@@ -534,7 +534,7 @@ struct SI_CAMERA *c;
 {
   printf("dma status\n");
   printf("transferred %d\n", c->dma_status.transferred );
-  printf("status 0x%x\n",    c->dma_status.status ); 
+  printf("status 0x%x\n",    c->dma_status.status );
   printf("cur %d\n",         c->dma_status.cur );
   printf("next %d\n",        c->dma_status.next );
 }
@@ -542,7 +542,7 @@ struct SI_CAMERA *c;
 stop_dma( c )
 struct SI_CAMERA *c;
 {
-  
+
   if( ioctl( c->fd, SI_IOCTL_DMA_ABORT, &c->dma_status )<0 ) {
     perror("dma abort");
   }
@@ -566,7 +566,7 @@ struct SI_CAMERA *c;
   c->dma_active = 0;
 }
 
-dma_mmap( c ) 
+dma_mmap( c )
 struct SI_CAMERA *c;
 {
   int nbufs;
@@ -574,8 +574,8 @@ struct SI_CAMERA *c;
   nbufs = c->dma_config.total / c->dma_config.buflen ;
   if( c->dma_config.total % c->dma_config.buflen )
     nbufs += 1;
-  if(!(c->ptr = (unsigned short *)mmap( 0, 
-       c->dma_config.maxever, 
+  if(!(c->ptr = (unsigned short *)mmap( 0,
+       c->dma_config.maxever,
        PROT_READ, MAP_SHARED, c->fd, 0))) {
       perror("mmap");
     } else
@@ -616,7 +616,7 @@ struct SI_CAMERA *c;
       perror("dma next");
 
     print_mem_changes( c->ptr, c->dma_config.total/sizeof(short) );
-    printf("trasferred %d total %d\n", 
+    printf("trasferred %d total %d\n",
       c->dma_status.transferred, c->dma_config.total );
     stop_dma( c );
     dma_unmap( c );
@@ -643,7 +643,7 @@ struct SI_CAMERA *c;
       perror("dma next");
 
     print_mem_changes( c->ptr, c->dma_config.total/sizeof(short) );
-    printf("trasferred %d total %d\n", 
+    printf("trasferred %d total %d\n",
       c->dma_status.transferred, c->dma_config.total );
     stop_dma( c );
     dma_unmap( c );
@@ -654,21 +654,21 @@ struct SI_CAMERA *c;
 int config_data[] = {
   850, //InstrumentModel
   100, //InstrumentSerialNumber
-  0,   //HardwareRevision 
-  0,   //SerialRegisterPhasing 
-  1,   //SerialRegisterSplit 
-  2056,//SerialRegisterSize 
-  0,   //ParallelRegisterPhasing 
-  1,   //ParallelRegisterSplit 
-  2056,//ParallelRegisterSize 
-  20,  //ParallelShiftDelay 
-  3,   //NumberOfPorts 
-  20,  //ShutterCloseDelay 
-  0,   //CCDTemperatureOffset 
-  0,   //BackplateTemperatureOffset 
-  1732,//CCDTemperatureSetpoint 
-  0,   //DataU16Size 
-  0,   //MPPModeDisable 
+  0,   //HardwareRevision
+  0,   //SerialRegisterPhasing
+  1,   //SerialRegisterSplit
+  2056,//SerialRegisterSize
+  0,   //ParallelRegisterPhasing
+  1,   //ParallelRegisterSplit
+  2056,//ParallelRegisterSize
+  20,  //ParallelShiftDelay
+  3,   //NumberOfPorts
+  20,  //ShutterCloseDelay
+  0,   //CCDTemperatureOffset
+  0,   //BackplateTemperatureOffset
+  1732,//CCDTemperatureSetpoint
+  0,   //DataU16Size
+  0,   //MPPModeDisable
   0,
   0,
   0,
@@ -696,7 +696,7 @@ struct SI_CAMERA *c;
   expect_y( c->fd );
 }
 
-print_help() 
+print_help()
 {
   printf("Comands\n" );
   printf(" A        -  Open Shutter returns Y/N\n");
@@ -765,7 +765,7 @@ int cmd;
   if( c->dma_config.total % c->dma_config.buflen )
     nbufs += 1;
 
-  if(!(c->ptr = (unsigned short *)mmap( 0, c->dma_config.maxever, 
+  if(!(c->ptr = (unsigned short *)mmap( 0, c->dma_config.maxever,
     PROT_READ, MAP_SHARED, c->fd, 0))) {
         perror("mmap");
         return;
@@ -811,7 +811,7 @@ int cmd;
   free(flip);
 }
 
-io_readout(c ) 
+io_readout(c )
 struct SI_CAMERA *c;
 {
   int i;
@@ -826,7 +826,7 @@ struct SI_CAMERA *c;
   }
 }
 
-io_config(c ) 
+io_config(c )
 struct SI_CAMERA *c;
 {
   int i;
@@ -907,7 +907,7 @@ struct SI_CAMERA *c;
 
 
     if( !c->ptr ) {
-      if(!(c->ptr = (unsigned short *)mmap( 0, c->dma_config.maxever, 
+      if(!(c->ptr = (unsigned short *)mmap( 0, c->dma_config.maxever,
         PROT_READ, MAP_PRIVATE, c->fd, 0))) {
           perror("mmap");
             return;
@@ -952,7 +952,7 @@ struct SI_CAMERA *c;
 
 
   if( !c->ptr ) {
-    if(!(c->ptr = (unsigned short *)mmap( 0, c->dma_config.maxever, 
+    if(!(c->ptr = (unsigned short *)mmap( 0, c->dma_config.maxever,
       PROT_READ, MAP_PRIVATE, c->fd, 0))) {
         perror("mmap");
           return;
@@ -973,8 +973,8 @@ struct SI_CAMERA *c;
     count = 0;
     do {
       ret = ioctl( c->fd, SI_IOCTL_DMA_NEXT, &c->dma_status );
-      printf(" wake ret:%d stat 0x%x xfer %d tot %d\n", 
-        ret, c->dma_status.status, 
+      printf(" wake ret:%d stat 0x%x xfer %d tot %d\n",
+        ret, c->dma_status.status,
         c->dma_status.transferred, c->dma_config.total);
 
 
