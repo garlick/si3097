@@ -1,4 +1,4 @@
-ALL  = dump-config test_app image
+ALL  = si-dump test_app image
 
 GTK_CFLAGS := $(shell pkg-config --cflags gtk+-2.0)
 GTK_LIBS := $(shell pkg-config --libs gtk+-2.0)
