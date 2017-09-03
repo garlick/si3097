@@ -10,8 +10,8 @@ all: $(ALL)
 clean:
 	rm -f *.o $(ALL)
 
-test_app: lib.o test_app.o dinter.o demux.o
-	$(CC) -g -o test_app lib.o test_app.o dinter.o demux.o
+test_app: lib.o test_app.o demux.o
+	$(CC) -g -o test_app lib.o test_app.o demux.o
 
 image: image.o uart.o lib.o demux.o
 	$(CC) -g -o image image.o uart.o lib.o demux.o $(GTK_LIBS) -lpthread -lm
