@@ -27,6 +27,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "si3097.h"
 #include "si_app.h"
+#include "dinter.h"
 
 //int bSave = 0;
 //int dma_mode = 0;
@@ -72,11 +73,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 */
 
 
-void deinterlace( cfg, from, to, len_bytes )
-struct SI_DINTERLACE *cfg;
-unsigned short *from;
-unsigned short *to;
-int len_bytes;
+void si_deinterlace( struct SI_DINTERLACE *cfg, unsigned short *from,
+                     unsigned short *to, int len_bytes )
 {
   int i;
   unsigned int k;
