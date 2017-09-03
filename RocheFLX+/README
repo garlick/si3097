@@ -1,0 +1,12 @@
+Found on Roche FLX+ linux server:
+
+/usr/local/rig/config/3639A.bin
+	Camera DSP code file.  Referred to as such from rigParameters.parse script.
+
+/usr/local/rig/config/series800_FFT.cpf
+	Similar to .set file.  Probably input to Roche specific software?
+	Includes 32 words of "readout" and "config" parameters.
+
+/usr/local/rig/runTime/camParamsConfig.txt
+	Simplified/pre-parsed version of above?  Values are different though.
+	camParamsInitial.txt and camParamsReadout.txt were identical
