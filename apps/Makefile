@@ -1,4 +1,3 @@
-
 ALL  = dump-config test_app #image
 
 GTK_CFLAGS = `pkg-config --cflags gtk+-2.0`
@@ -9,7 +8,7 @@ CC=gcc
 all: $(ALL)
 
 clean:
-	rm -f *.o *.ver *~
+	rm -f *.o $(ALL)
 
 test_app: lib.o test_app.o dinter.o demux.o
 	$(CC) -g -o test_app lib.o test_app.o dinter.o demux.o
