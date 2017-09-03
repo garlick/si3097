@@ -1,8 +1,8 @@
 ALL  = dump-config test_app image
 
-GTK_CFLAGS = `pkg-config --cflags gtk+-2.0`
-GTK_LIBS = `pkg-config --libs gtk+-2.0`
-CFLAGS=-g -I../driver $(GTK_CFLAGS)
+GTK_CFLAGS := $(shell pkg-config --cflags gtk+-2.0)
+GTK_LIBS := $(shell pkg-config --libs gtk+-2.0)
+CFLAGS=-g -Wall -Werror -I../driver $(GTK_CFLAGS)
 CC=gcc
 
 all: $(ALL)

@@ -26,6 +26,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <fcntl.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <sys/ioctl.h>
+#include <unistd.h>
+#include <time.h>
 
 #include "si3097.h"
 #include "si_app.h"
@@ -39,9 +42,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 void parse_commands( struct SI_CAMERA *c, char *buf );
 void dma_test( struct SI_CAMERA *c, int cmd, int repeat );
-void write_dma_data( unsigned char *ptr, int total );
+void write_dma_data( void *ptr, int total );
 void print_data_len( unsigned char *ptr, int buflen, int total );
-void print_mem_changes( short *ptr, int nwords );
+void print_mem_changes( unsigned short *ptr, int nwords );
 void expect_y( int fd );
 void print_readout( struct SI_CAMERA *c );
 void print_config( struct SI_CAMERA *c );
@@ -68,7 +71,6 @@ int main(int argc, char *argv[] )
   struct SI_CAMERA *c;
   char buf[256], file[256];
   int verbose, i;
-  unsigned char rbyte;
 
   c = ( struct SI_CAMERA *)malloc(sizeof(struct SI_CAMERA ));
   bzero(c, sizeof(struct SI_CAMERA));
@@ -271,7 +273,7 @@ void parse_commands( struct SI_CAMERA *c, char *buf )
 
 void dma_test( struct SI_CAMERA *c, int cmd, int repeat )
 {
-  int i, last, nbufs, loop, ret, rnd;
+  int nbufs, loop, ret, rnd;
   unsigned char *data1, *data2;
   fd_set wait;
   int sel;
@@ -372,14 +374,14 @@ void dma_test( struct SI_CAMERA *c, int cmd, int repeat )
 
 /* look at data and guess how much data was transferred */
 
-void write_dma_data( unsigned char *ptr, int total )
+void write_dma_data( void *ptr, int total )
 {
   FILE *fd;
-  int tmm;
+  time_t tmm;
   char buf[256];
 
   time(&tmm);
-  sprintf( buf, "dma_%d.cam", tmm );
+  sprintf( buf, "dma_%ld.cam", tmm );
 
   if( !(fd = fopen( buf, "w+" ))) {
     printf("cant write dma.cam\n");
@@ -420,10 +422,10 @@ void print_data_len( unsigned char *ptr, int buflen, int total )
    This printout shows that.
 */
 
-void print_mem_changes( short *ptr, int nwords )
+void print_mem_changes( unsigned short *ptr, int nwords )
 {
   int i, cr;
-  short last;
+  unsigned short last;
 
   last = 0xcafe;
   cr = 0;
@@ -493,7 +495,7 @@ void print_status( struct SI_CAMERA *c )
 
 void print_cfg( struct CFG_ENTRY *cfg, int val )
 {
-  int i, ix;
+  int ix;
   unsigned int mask;
   double value;
   char *units;
@@ -723,10 +725,9 @@ void print_help( void )
 
 void camera_image( struct SI_CAMERA *c, int cmd )
 {
-  int i, last, nbufs, ret;
+  int nbufs, ret;
   unsigned short *flip;
-  fd_set wait;
-  int sel, tot, serlen, parlen;
+  int tot, serlen, parlen;
 
   if( cmd != 'C' && cmd != 'D' && cmd != 'E' && cmd != 'Z' ) {
     printf("camera_image needs C, D, E, Z type ? for help\n");
@@ -858,6 +859,7 @@ int change_cfg( struct SI_CAMERA *c, struct CFG_ENTRY *cfg,
   si_send_command(c->fd, cmd );
   si_send_n_ints( c->fd, 2, data );
   ex = si_expect_yn( c->fd );
+  return ex;
 }
 
 
@@ -872,7 +874,6 @@ void send_readout( struct SI_CAMERA *c )
 void vmatest( struct SI_CAMERA *c )
 {
   int nbufs, count;
-  unsigned short *ptr;
 
   count = 1000;
 
@@ -910,7 +911,6 @@ void vmatest( struct SI_CAMERA *c )
 void timeout_test( struct SI_CAMERA *c )
 {
   int nbufs, count, serlen, parlen, tot, ret, repeat;
-  unsigned short *ptr;
 
   repeat = 100;
 

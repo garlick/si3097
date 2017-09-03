@@ -43,6 +43,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <pthread.h>
 #include <sys/stat.h>
 #include <unistd.h>
+#include <sys/ioctl.h>
 
 
 #include "si3097.h"
@@ -145,7 +146,6 @@ void do_abort( GtkWidget *widget, gpointer   data )
 void dma_done( gpointer a, gint b, GdkInputCondition condition )
 {
   struct SI_CAMERA *head;
-  int contin;
 
   if( condition != GDK_INPUT_READ )
     return;
@@ -270,11 +270,6 @@ void do_controls( GtkWidget *widget, gpointer   data )
 void do_load( GtkWidget *widget, void *dp )
 {
   GtkWidget *dialog;
-  int ix;
-  char *s;
-  char *delim = " \t\n";
-  FILE *fd;
-  char buf[256];
   struct SI_CAMERA *head;
   struct stat file_stat;
 
@@ -335,23 +330,21 @@ int store_filename (GtkWidget *widget, void *dp)
   head->fname = (char *)gtk_file_selection_get_filename(
     GTK_FILE_SELECTION(head->file_widget));
 
-  if((fd = open( head->fname, O_RDWR|O_CREAT, 0666))>=0)
-    if( (n = write(fd, head->flip_data, 4096*4096*2 ))<0) {
-        printf("failed to write\n");
-  } else
+  if((fd = open( head->fname, O_RDWR|O_CREAT, 0666))<0) {
     printf("cant open filename: %s\n", head->fname);
+    return -1;
+  }
+  if( (n = write(fd, head->flip_data, 4096*4096*2 ))<0) {
+    printf("failed to write\n");
+    return -1;
+  }
 
   return 0;
 }
 
 void do_save( GtkWidget *widget, void *dp)
 {
-  GtkWidget *dialog;
-  time_t tm;
-  FILE *fd;
-  int i;
-  char *lab;
-  struct SI_CAMERA *head;
+  struct SI_CAMERA *head = dp;
 
    /* Create the selector */
 
@@ -380,8 +373,8 @@ void do_save( GtkWidget *widget, void *dp)
 
 int main( int argc, char *argv[] )
 {
-  int i, fd;
-  GtkWidget *window, *vbox, *frame, *hbox, *image, *but;
+  int fd;
+  GtkWidget *window, *vbox, *hbox, *image, *but;
   GtkWidget *vbox2, *align;
 
   GdkPixbuf *pix, *logo;
@@ -505,7 +498,6 @@ void fun_fill( void *dp )
   int stride;
   int width, height, n_channels, row, col;
   guchar *pixels, *p;
-  int r;
   GdkPixbuf *pix;
 
   head = (struct SI_CAMERA *)dp;
@@ -531,7 +523,6 @@ void fun_fill( void *dp )
     for( col=0; col<width; col++ ) {
 //      usleep(100);
       head->fraction = (double)(row  * width + col)/(height*width) ;
-      r = rand();
       p = pixels + col * stride + row * n_channels;
       p[0] = (((int)(256* (double)col/(double)width )) & 0xff);  /* red */
       p[1] = (((int)(256* (double)row/(double)width )) & 0xff);  /* green */
@@ -551,9 +542,8 @@ void fill_pix_with_data( struct SI_CAMERA *head, unsigned short *data,
   int stride;
   int width, height, n_channels, row, col;
   guchar *pixels, *p;
-  int r;
   GdkPixbuf *pix;
-  unsigned short dp, max;
+  unsigned short dp;
 
   head->dma_active = 1;
   head->fraction = 0.0;

@@ -76,7 +76,6 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 void si_deinterlace( struct SI_DINTERLACE *cfg, unsigned short *from,
                      unsigned short *to, int len_bytes )
 {
-  int i;
   unsigned int k;
   unsigned short *to_ptr;
   unsigned short *from_ptr;
@@ -84,11 +83,9 @@ void si_deinterlace( struct SI_DINTERLACE *cfg, unsigned short *from,
   unsigned int  offset;
   unsigned int  nX, nY;
   unsigned int  index;
-  int    ntb, n_rows, n_cols;
-  size_t  nStrLen;
+  int    n_rows, n_cols;
   unsigned int  n1cols,n2cols,n3cols,n4cols;
   unsigned int  n1rows,n2rows,n3rows,n4rows;
-  int    repeat;
 
 
   to_ptr = to;        // pick up the image pointer for write
@@ -98,7 +95,6 @@ void si_deinterlace( struct SI_DINTERLACE *cfg, unsigned short *from,
   offset  = 0;          // offset into (input)image
   nX  = 0;                 // X pointer
   nY  = 0;                 // Y pointer
-  ntb = 0;                 // pointer to test buffer
   cfg->n_ptr_pos = 0;      // pointer to filling buffer
 
   len_words = len_bytes/2;

@@ -26,6 +26,8 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <fcntl.h>
 #include <string.h>
 #include <sys/mman.h>
+#include <unistd.h>
+#include <sys/ioctl.h>
 
 #include "si3097.h"
 #include "si_app.h"
@@ -66,7 +68,7 @@ int si_sendfile( int fd, int breaktime, char *filename )
 
   if(!(inpointer = fopen(filename,"rb"))) {
 
-    fprintf(dbgptr, "inpointer: %x\n", inpointer);
+    fprintf(dbgptr, "inpointer: %p\n", inpointer);
     fflush(dbgptr);
 
     return(-1);
@@ -74,7 +76,7 @@ int si_sendfile( int fd, int breaktime, char *filename )
 
   fprintf(dbgptr, "File opened \n");
   fflush(dbgptr);
-  fprintf(dbgptr, "abuffer: %x  bbuffer: %x \n", abuffer, bbuffer);
+  fprintf(dbgptr, "abuffer: %p  bbuffer: %p \n", abuffer, bbuffer);
   fflush(dbgptr);
 
   i = 0;
@@ -346,7 +348,7 @@ int si_send_n_ints( int fd, int n, int *data )
 
 /* swap 4 byte integer */
 
-int si_swapl( int *d )
+void si_swapl( int *d )
 {
   union {
     int i;
@@ -446,6 +448,7 @@ int si_load_cfg( struct CFG_ENTRY **e, char *fname, char *var )
   }
 
   fclose(fd);
+  return 0;
 }
 
 /* fill in all the parameters from the cfg_string */
@@ -548,6 +551,7 @@ int si_parse_cfg_string( struct CFG_ENTRY *entry )
       }
       break;
   }
+  return 0;
 }
 
 /*
@@ -612,7 +616,7 @@ int si_setfile_readout( struct SI_CAMERA *c, char *file )
       continue;
 
     strtok( buf, delim );
-    if( s = strtok( NULL, delim ))
+    if( (s = strtok( NULL, delim)))
       c->readout[ cfg->index ] = atoi(s);
 
   }
@@ -640,7 +644,7 @@ struct CFG_ENTRY *si_find_readout( struct SI_CAMERA *c, char *name )
 
 void si_sprint_cfg_val_only( char *buf, struct CFG_ENTRY *cfg, int val )
 {
-  int i, ix;
+  int ix;
   unsigned int mask;
   double value;
   char *units;
@@ -653,7 +657,7 @@ void si_sprint_cfg_val_only( char *buf, struct CFG_ENTRY *cfg, int val )
           units = cfg->u.iobox.units;
         else
           units = NULL;
-        if( units == NULL || cfg->u.iobox.mult == 1.0 && cfg->u.iobox.offset == 0.0 ) {
+        if( units == NULL || (cfg->u.iobox.mult == 1.0 && cfg->u.iobox.offset == 0.0) ) {
           sprintf(buf, "%d", val);
         } else {
           value = cfg->u.iobox.mult * val + cfg->u.iobox.offset;

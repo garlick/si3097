@@ -28,59 +28,7 @@ Whole image is size by size or 4096x4096
 
 */
 
-void si_camera_demux_old( unsigned short *out, unsigned short *in, int size )
-{
-  int so2, tot, row, col, irow, icol, i;
-
-  so2 = size/2;
-  tot = size*size; /* number of elements in data */
-
-  row = 0;
-  col = 0;
-  for( i=0; i<tot; i+=4 ) {
-
-    irow = row - so2;
-    icol = col - so2;
-    out[ row*size + col ]             = in[i];
-//    out[ row*size + icol+so2 ]        = in[i+1];
-
-//    out[ (irow+so2)*size + col ]      = in[i+2];
-//    out[ (irow+so2)*size + icol+so2 ] = in[i+3];
-
-    if( ++col >= so2 ) {
-      col = 0;
-      row++;
-    }
-
-  }
-}
-
-void si_camera_demux( unsigned short *out, unsigned short *in, int size )
-{
-  int so2, tot, row, col, irow, icol, i;
-
-  so2 = size/2;
-  tot = size*size; /* number of elements in data */
-
-  row = 0;
-  col = 0;
-  tot = 0;
-  for( row = 0; row < 2046; row++ ) {
-    for( col = 0; col < 2047; col++ ) {
-      out[ (row+2)*4096 + (col+1) ]  = in[tot];
-
-      icol = (2047 - (col+1)) + 2048 ;
-      irow = (2046 - (row+1)) + 2048;
-      out[ (row+2)*4096 + icol ]  = in[tot+1];
-      out[ irow*4096 + col+1 ]  = in[tot+2];
-      out[ irow*4096 + icol ]  = in[tot+3];
-
-      tot+=4;
-    }
-  }
-}
-
-/* try to make a demux that works on both configurations */
+/* try to make a demux that works on old and new configurations */
 
 /* size 4096 serlen 2047 parlen 2046 */
 
@@ -89,7 +37,7 @@ void si_camera_demux( unsigned short *out, unsigned short *in, int size )
 void si_camera_demux_gen( unsigned short *out, unsigned short *in, int size,
                           int serlen, int parlen )
 {
-  int so2, tot, row, col, irow, icol, i;
+  int so2, tot, row, col, irow, icol;
 
   so2 = size/2;
   tot = size*size; /* number of elements in data */

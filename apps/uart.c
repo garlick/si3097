@@ -40,6 +40,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <gtk/gtk.h>
 #include <time.h>
 #include <sys/mman.h>
+#include <sys/ioctl.h>
 
 #include "si3097.h"
 #include "si_app.h"
@@ -74,7 +75,7 @@ struct COMMAND_DAT {
 
 static void pwindow_dest( GtkWidget *widget, gpointer  data );
 static void cwindow_dest( GtkWidget *widget, gpointer data );
-static void config_image( GtkWidget *widget, gpointer data );
+//static void config_image( GtkWidget *widget, gpointer data );
 static void param_load( GtkWidget *widget, struct COMMAND_DAT *cmd );
 static void param_send( GtkWidget *widget, struct COMMAND_DAT *cmd );
 static void send_control( GtkWidget *widget, struct UART_CMD *cmd );
@@ -87,7 +88,7 @@ static int do_getcmd( int command );
 static void readout_set_files( struct SI_CAMERA *head, GtkWidget *hbox );
 static int readout_file( GtkWidget *widget, void *dp );
 static void send_readout( struct SI_CAMERA *c );
-static void load_status( void );
+//static void load_status( void );
 
 static void pwindow_dest( GtkWidget *widget, gpointer  data )
 {
@@ -178,6 +179,7 @@ void uart_config_dma( GtkWidget *widget, gpointer   data )
   head->dma_configed = 1;
 }
 
+#if 0
 static void config_image( GtkWidget *widget, gpointer data )
 {
   struct SI_CAMERA *head;
@@ -208,10 +210,10 @@ static void config_image( GtkWidget *widget, gpointer data )
      g_object_unref( head->pix );
   head->pix = pix;
 }
+#endif
 
 static void param_load( GtkWidget *widget, struct COMMAND_DAT *cmd )
 {
-  unsigned char reply;
   int *ret;
   struct CFG_ENTRY **ent;
   struct CFG_ENTRY *cfg;
@@ -250,9 +252,7 @@ static void param_load( GtkWidget *widget, struct COMMAND_DAT *cmd )
 
 static void param_send( GtkWidget *widget, struct COMMAND_DAT *cmd)
 {
-  unsigned char reply;
   int *ret, i, len;
-  char text[80];
   const char *s;
   struct SI_CAMERA *h;
   struct CFG_ENTRY **ent;
@@ -275,7 +275,7 @@ static void param_send( GtkWidget *widget, struct COMMAND_DAT *cmd)
   for( i=0; i< len ; i++ ) {
     cfg = ent[i];
     if( cfg && cfg->name && cfg->widget ) {
-      if( s = gtk_entry_get_text(GTK_ENTRY(cfg->widget)))
+      if( (s = gtk_entry_get_text(GTK_ENTRY(cfg->widget))))
         *ret = atoi(s);
     }
     ret++;
@@ -377,15 +377,16 @@ int uart_show_param( struct SI_CAMERA *head )
   build_param_list( &cmd_dat[2], head->e_status, vbox,0  );
   gtk_widget_show (vbox);
 
+  return 0;
 }
 
 static void build_param_list( struct COMMAND_DAT *cmd, struct CFG_ENTRY **e,
                               GtkWidget *vbox, int set )
 {
-  GtkWidget *label, *frame, *hbox, *but;
-  int row, col, i;
+  GtkWidget *label, *hbox, *but;
+  int i;
   struct CFG_ENTRY *cfg;
-  char text[80], *units;
+  char text[80];
 
   cmd->dat = e;
   hbox = gtk_hbox_new(FALSE,0);
@@ -450,7 +451,6 @@ static struct UART_CMD commands[] = {
 
 int uart_show_control( struct SI_CAMERA *head )
 {
-  int i;
   GtkWidget *window, *vbox, *frame, *hbox, *but, *label, *bvbox;
   struct UART_CMD *c;
   char buf[80];
@@ -669,7 +669,7 @@ int uart_show_control( struct SI_CAMERA *head )
 //  g_signal_connect (G_OBJECT (but), "clicked", G_CALLBACK (config_image), head );
 //  gtk_box_pack_start (GTK_BOX (vbox), but , FALSE, FALSE,BOX_PACK);
 //  gtk_widget_show (but);
-
+  return 0;
 }
 
 
@@ -761,6 +761,7 @@ static int do_getcmd( int command )
     case 'Z':
       return 3;
   }
+  return -1;
 }
 
 
@@ -790,8 +791,6 @@ static int readout_file( GtkWidget *widget, void *dp )
 
   if (gtk_dialog_run (GTK_DIALOG (dialog)) == GTK_RESPONSE_ACCEPT) {
     char *filename;
-    unsigned short *data;
-    int fd, n;
 
     filename = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (dialog));
     gtk_widget_destroy (dialog);
@@ -804,6 +803,7 @@ static int readout_file( GtkWidget *widget, void *dp )
   } else {
     gtk_widget_destroy (dialog);
   }
+  return 0;
 }
 
 static void send_readout( struct SI_CAMERA *c )
@@ -813,8 +813,9 @@ static void send_readout( struct SI_CAMERA *c )
   si_expect_yn( c->fd );
 }
 
+#if 0
 static void load_status( void )
 {
   param_load( NULL, &cmd_dat[2] );    /* readback status from camera */
 }
-
+#endif

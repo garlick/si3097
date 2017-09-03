@@ -129,7 +129,6 @@ void recv_acknak (int fd)
 void dump_config (int fd)
 {
     int i, rc;
-    char c;
     uint32_t buf[32];
 
     send_command (fd, 'L');

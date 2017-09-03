@@ -7,7 +7,7 @@ int si_send_char( int fd, int data );
 int si_receive_char( int fd );
 int si_receive_n_ints( int fd, int n, int *data );
 int si_send_n_ints( int fd, int n, int *data );
-int si_swapl( int *d );
+void si_swapl( int *d );
 int si_expect_yn( int fd );
 void si_send_break( int fd, int ms );
 int si_load_camera_cfg( struct SI_CAMERA *c, char *fname );
