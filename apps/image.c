@@ -47,6 +47,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "si3097.h"
 #include "si_app.h"
+#include "demux.h"
 
 #define BOX_PACK 0
 #define FRAME_SPACE 3
@@ -162,7 +163,8 @@ GdkInputCondition condition;
     if( head->fill )
       pthread_join( head->fill, NULL ); /* must be done before flip */
 
-    camera_demux_gen( head->flip_data, head->ptr, head->side, serlen, parlen );
+    si_camera_demux_gen( head->flip_data, head->ptr, head->side,
+                         serlen, parlen );
 
     printf("dma_done, transferred %d\n", head->dma_status.transferred );
     pthread_create(&head->fill, NULL, image_fill, head );

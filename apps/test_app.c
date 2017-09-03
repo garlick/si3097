@@ -29,6 +29,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "si3097.h"
 #include "si_app.h"
+#include "demux.h"
 
 /*
   low level testout of the si3097 driver
@@ -802,10 +803,10 @@ int cmd;
   bzero( flip, 4096*4096*2 );
 
   if( serlen < 2047 ) {
-    camera_demux_gen( flip, c->ptr, 2048, serlen, parlen );
+    si_camera_demux_gen( flip, c->ptr, 2048, serlen, parlen );
     write_dma_data( flip, 2048*2048*2 );
   } else {
-    camera_demux_gen( flip, c->ptr, 4096, serlen, parlen );
+    si_camera_demux_gen( flip, c->ptr, 4096, serlen, parlen );
     write_dma_data( flip, 4096*4096*2 );
   }
   free(flip);

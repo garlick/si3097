@@ -2,6 +2,8 @@
 #include <stdlib.h>
 #include <math.h>
 
+#include "demux.h"
+
 /* demultiplex 4 quadrant camera data */
 /*
 
@@ -26,10 +28,7 @@ Whole image is size by size or 4096x4096
 
 */
 
-camera_demux_old( out, in, size )
-unsigned short *out;
-unsigned short *in;
-int size;
+void si_camera_demux_old( unsigned short *out, unsigned short *in, int size )
 {
   int so2, tot, row, col, irow, icol, i;
 
@@ -56,10 +55,7 @@ int size;
   }
 }
 
-camera_demux( out, in, size )
-unsigned short *out;
-unsigned short *in;
-int size;
+void si_camera_demux( unsigned short *out, unsigned short *in, int size )
 {
   int so2, tot, row, col, irow, icol, i;
 
@@ -90,10 +86,8 @@ int size;
 
 /* size 2048 serlen 1023 parlen 1023 */
 
-camera_demux_gen( out, in, size, serlen, parlen )
-unsigned short *out;
-unsigned short *in;
-int size;
+void si_camera_demux_gen( unsigned short *out, unsigned short *in, int size,
+                          int serlen, int parlen )
 {
   int so2, tot, row, col, irow, icol, i;
 
