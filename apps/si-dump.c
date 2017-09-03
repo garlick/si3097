@@ -121,34 +121,67 @@ void recv_acknak (int fd)
         die ("read: expected 'Y' got %c\n", c);
 }
 
-/* L - load config
- * Send command, then receive 32 uint32_t's, then get ACK/NAK
+/* Send 'cmd', then receive 'count' uint32_t's, then get ACK/NAK
  * Exit with error message on stderr if anything goes wrong.
  * Display the raw block of integers.
  */
-void dump_config (int fd)
+void dump_from_camera (int fd, char cmd, int count)
 {
     int i, rc;
-    uint32_t buf[32];
+    int len = (count * sizeof (uint32_t));
+    uint32_t *buf;
 
-    send_command (fd, 'L');
-    rc = read (fd, buf, sizeof (buf));
+    if (!(buf = malloc (len)))
+        die ("out of memory");
+
+    send_command (fd, cmd);
+    rc = read (fd, buf, len);
     if (rc < 0)
         die ("read: %s\n", strerror (errno));
-    if (rc < sizeof (buf))
-        die ("read: config timed out\n");
+    if (rc < len)
+        die ("read: timed out reading %d 32-bit integers\n", count);
     recv_acknak (fd);
 
-    for (i = 0; i < 32; i++)
-        printf ("[%d]: %u\n", i, ntohl (buf[i]));
+    for (i = 0; i < count; i++)
+        printf ("[%.02d] = %u\n", i, ntohl (buf[i]));
+
+    free (buf);
+}
+
+void usage (void)
+{
+        fprintf (stderr,
+"Usage: si-dump CMD\n"
+"    L - configuration parameters\n"
+"    H - readout parameters\n"
+"    I - camera status\n");
+        exit (1);
 }
 
 int main (int argc, char **argv)
 {
     int fd;
 
+    if (argc != 2)
+        usage ();
+
     fd = initialize (device);
-    dump_config (fd);
+    switch (argv[1][0]) {
+        case 'L':
+            printf ("Configuration parameters:\n");
+            dump_from_camera (fd, 'L', 32);
+            break;
+        case 'H':
+            printf ("Readout Parameters:\n");
+            dump_from_camera (fd, 'H', 32);
+            break;
+        case 'I':
+            printf ("Camera status:\n");
+            dump_from_camera (fd, 'I', 16);
+            break;
+        default:
+            usage ();
+    }
     close (fd);
 
     exit (0);
