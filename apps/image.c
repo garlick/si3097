@@ -47,6 +47,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "si3097.h"
 #include "si_app.h"
+#include "lib.h"
 #include "demux.h"
 
 #define BOX_PACK 0
@@ -225,7 +226,7 @@ int cmd;
     perror("dma start");
     return;
   }
-  send_command_yn( head->fd, cmd );
+  si_send_command_yn( head->fd, cmd );
 
 //  g_timeout_add( 200, dma_poll, head );
 }
@@ -383,8 +384,8 @@ int main( int argc, char *argv[] )
   fd = -1;
   head->fd = fd;
   if( fd >= 0 ) {
-    load_camera_cfg( head, "Test.cfg" );
-    init_com( fd, 57600, 0, 8, 1, 9000 ); /* setup uart for camera */
+    si_load_camera_cfg( head, "Test.cfg" );
+    si_init_com( fd, 57600, 0, 8, 1, 9000 ); /* setup uart for camera */
   }
 
   window = gtk_window_new (GTK_WINDOW_TOPLEVEL);

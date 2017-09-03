@@ -43,6 +43,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 #include "si3097.h"
 #include "si_app.h"
+#include "lib.h"
 
 #define BOX_PACK 0
 #define FRAME_SPACE 3
@@ -211,15 +212,15 @@ struct COMMAND_DAT *cmd;
   printf("param_load cmd %c\n",  cmd->load );
   h = cmd->head;
 
-  if( send_command( h->fd, cmd->load ) < 0 ) {
-    perror("send_command");
+  if( si_send_command( h->fd, cmd->load ) < 0 ) {
+    perror("si_send_command");
     return;
   }
 
   len = cmd->len;
 
-  receive_n_ints( h->fd, len, cmd->data );
-  if( !expect_yn( h->fd ) )
+  si_receive_n_ints( h->fd, len, cmd->data );
+  if( !si_expect_yn( h->fd ) )
     printf("didnt get a y from uart\n");
 
   ent = cmd->dat;
@@ -230,7 +231,7 @@ struct COMMAND_DAT *cmd;
   for( i=0; i< len ; i++ ) {
      cfg = ent[i];
      if( cfg && cfg->name && cfg->widget ) {
-      sprint_cfg_val_only( text, cfg, *ret );
+      si_sprint_cfg_val_only( text, cfg, *ret );
       gtk_entry_set_text(GTK_ENTRY(cfg->widget),text);
     }
     ret++;
@@ -252,8 +253,8 @@ struct COMMAND_DAT *cmd;
   printf("param_send cmd %c\n",  cmd->send );
   h = cmd->head;
 
-  if( send_command( h->fd, cmd->load ) < 0 ) {
-    perror("send_command");
+  if( si_send_command( h->fd, cmd->load ) < 0 ) {
+    perror("si_send_command");
     return;
   }
 
@@ -272,8 +273,8 @@ struct COMMAND_DAT *cmd;
     ret++;
   }
 
-  if( send_n_ints( h->fd, cmd->len, cmd->data ) < 0 ) {
-    perror("send_command");
+  if( si_send_n_ints( h->fd, cmd->len, cmd->data ) < 0 ) {
+    perror("si_send_n_ints");
     return;
   }
 }
@@ -286,12 +287,12 @@ struct UART_CMD *cmd;
   char text[256];
 
   fd = cmd->head->fd;
-  if( send_command( fd, cmd->cmd ) < 0 ) {
-    perror("send_command");
+  if( si_send_command( fd, cmd->cmd ) < 0 ) {
+    perror("si_send_command");
     return;
   }
   if( cmd->resp ) {
-    yn = expect_yn( fd );
+    yn = si_expect_yn( fd );
 
     if( yn == 1 )
       strcpy(text, "Y" );
@@ -424,7 +425,7 @@ GtkWidget *vbox;
 
        gtk_box_pack_start (GTK_BOX (vbox), hbox, FALSE, FALSE,BOX_PACK);
        if( cmd->data ) {
-         sprint_cfg_val_only( text, cfg, cmd->data[i] );
+         si_sprint_cfg_val_only( text, cfg, cmd->data[i] );
          gtk_entry_set_text(GTK_ENTRY(cfg->widget),text);
        }
        gtk_widget_show (cfg->widget);
@@ -806,7 +807,7 @@ void *dp;
     filename = gtk_file_chooser_get_filename (GTK_FILE_CHOOSER (dialog));
     gtk_widget_destroy (dialog);
     printf("opening %s\n", filename );
-    setfile_readout( head,  filename ); /* load them into local array */
+    si_setfile_readout( head,  filename ); /* load them into local array */
     send_readout( head );               /* send to camera */
     param_load( NULL, &cmd_dat[0] );    /* readback from camera */
     config_dma( NULL, head);            /* config dma using readback */
@@ -819,9 +820,9 @@ void *dp;
 send_readout( c )
 struct SI_CAMERA *c;
 {
-  send_command(c->fd, 'F'); // F    - Send Readout Parameters
-  send_n_ints( c->fd, 32, (int *)&c->readout );
-  expect_yn( c->fd );
+  si_send_command(c->fd, 'F'); // F    - Send Readout Parameters
+  si_send_n_ints( c->fd, 32, (int *)&c->readout );
+  si_expect_yn( c->fd );
 }
 
 load_status()

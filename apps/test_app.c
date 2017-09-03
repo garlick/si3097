@@ -30,6 +30,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "si3097.h"
 #include "si_app.h"
 #include "demux.h"
+#include "lib.h"
 
 /*
   low level testout of the si3097 driver
@@ -37,11 +38,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 
 int sendfile( int fd, int, char *);
-void  init_com( int, int, int, int, int, int  );
 void  send_break( int, int );
 int print_status(struct SI_CAMERA *);
 int print_readout(struct SI_CAMERA *);
-int receive_n_ints( int, int, int * );
 int print_config(struct SI_CAMERA *);
 int print_mem_changes( short *, int );
 void print_cfg( struct CFG_ENTRY *, int );
@@ -79,12 +78,12 @@ char *argv[];
     perror("verbose error");
   }
 
-  init_com( c->fd, 57600, 0, 8, 1, 9000 ); /* setup uart for camera */
-  load_camera_cfg( c, "Test.cfg" );
-  setfile_readout( c, "800-299x1.set" );
+  si_init_com( c->fd, 57600, 0, 8, 1, 9000 ); /* setup uart for camera */
+  si_load_camera_cfg( c, "Test.cfg" );
+  si_setfile_readout( c, "800-299x1.set" );
   send_readout( c );
-  send_command(c->fd, 'H');     // H    - load readout
-  receive_n_ints( c->fd, 32, (int *)&c->readout );
+  si_send_command(c->fd, 'H');     // H    - load readout
+  si_receive_n_ints( c->fd, 32, (int *)&c->readout );
   expect_y( c->fd );
 
   print_help();
@@ -112,39 +111,39 @@ char *buf;
   static int verbose = 1;
 
   if( strncasecmp( buf, "sendfile", 8 ) == 0 ) {
-    sendfile( c->fd, 250, "2769d.bin" );
+    si_sendfile( c->fd, 250, "2769d.bin" );
   } else if( buf[0] == 'A' ) {
-    send_command_yn(c->fd, 'A');  // A  - Open Shutter  returns Y/N
+    si_send_command_yn(c->fd, 'A');  // A  - Open Shutter  returns Y/N
   } else if( buf[0] == 'B' ) {
-    send_command_yn(c->fd, 'B');  // B - Close Shutter returns Y/N
+    si_send_command_yn(c->fd, 'B');  // B - Close Shutter returns Y/N
   } else if( buf[0] == 'I' ) {
-    send_command(c->fd, 'I');     // I    - Get camera status
-    receive_n_ints( c->fd, 16, c->status );
+    si_send_command(c->fd, 'I');     // I    - Get camera status
+    si_receive_n_ints( c->fd, 16, c->status );
     print_status( c );
     expect_y( c->fd );
   } else if( buf[0] == 'J' ) {
     set_config(c);
 
   } else if( buf[0] == 'H' ) {
-    send_command(c->fd, 'H');     // H    - load readout
-    receive_n_ints( c->fd, 32, (int *)&c->readout );
+    si_send_command(c->fd, 'H');     // H    - load readout
+    si_receive_n_ints( c->fd, 32, (int *)&c->readout );
     print_readout( c );
     expect_y( c->fd );
 
   } else if( buf[0] == 'L' ) {
-    send_command(c->fd, 'L');     // L    - load config
-    receive_n_ints( c->fd, 32, (int *)&c->config );
+    si_send_command(c->fd, 'L');     // L    - load config
+    si_receive_n_ints( c->fd, 32, (int *)&c->config );
     print_config( c );
     expect_y( c->fd );
 
   } else if( buf[0] == 'S' ) {
-    send_command(c->fd, 'S');     // S    - Cooler On, no response
+    si_send_command(c->fd, 'S');     // S    - Cooler On, no response
 
   } else if( buf[0] == 'T' ) {
-    send_command(c->fd, 'T');     // T    - Cooler Off, no response
+    si_send_command(c->fd, 'T');     // T    - Cooler Off, no response
 
   } else if( buf[0] == '0' ) {
-    send_command(c->fd, '0');
+    si_send_command(c->fd, '0');
     // Abort Readout, aborts an ongoing exposure (camera cannot
     // be stopped during actual readout)
   } else if( strncmp( buf, "stopdma", 7 )== 0 ) {
@@ -190,10 +189,10 @@ char *buf;
     strtok( buf, delim );
     if( !(s = strtok( NULL, delim ) ))
       s = "800-299x1.set";
-    setfile_readout( c,  s );
+    si_setfile_readout( c,  s );
     send_readout( c );
-    send_command(c->fd, 'H');     // H    - load readout
-    receive_n_ints( c->fd, 32, (int *)&c->readout );
+    si_send_command(c->fd, 'H');     // H    - load readout
+    si_receive_n_ints( c->fd, 32, (int *)&c->readout );
     print_readout( c );
     expect_y( c->fd );
   } else if( strncmp( buf, "send_readout", 5 )== 0 ) {
@@ -310,7 +309,7 @@ int repeat;
   }
 
   bzero(&c->dma_status, sizeof(struct SI_DMA_STATUS));
-  send_command_yn(c->fd, cmd );
+  si_send_command_yn(c->fd, cmd );
 
   /* random sleep to test driver */
 
@@ -442,7 +441,7 @@ int nwords;
 expect_y( fd )
 int fd;
 {
-  if( expect_yn(fd) != 1 )
+  if( si_expect_yn(fd) != 1 )
     printf("ERROR expected yes got no from uart\n");
 }
 
@@ -611,7 +610,7 @@ struct SI_CAMERA *c;
       perror("dma start");
       continue;
     }
-    send_command_yn(c->fd, 'C' );
+    si_send_command_yn(c->fd, 'C' );
 
     if( (ret = ioctl( c->fd, SI_IOCTL_DMA_NEXT, &c->dma_status ) )<0 )
       perror("dma next");
@@ -639,7 +638,7 @@ struct SI_CAMERA *c;
       perror("dma start");
       continue;
     }
-    send_command_yn(c->fd, 'C' );
+    si_send_command_yn(c->fd, 'C' );
     if( (ret = ioctl( c->fd, SI_IOCTL_DMA_NEXT, &c->dma_status ) )<0 )
       perror("dma next");
 
@@ -692,8 +691,8 @@ struct SI_CAMERA *c;
 {
   printf("sending default configuration parameters\n");
   memcpy( (int *)&c->config,  config_data, sizeof(int)*32 );
-  send_command(c->fd, 'J'); // J    - Send Configuration Parameters
-  send_n_ints( c->fd, 32, (int *)&c->config );
+  si_send_command(c->fd, 'J'); // J    - Send Configuration Parameters
+  si_send_n_ints( c->fd, 32, (int *)&c->config );
   expect_y( c->fd );
 }
 
@@ -781,7 +780,7 @@ int cmd;
   }
 
   bzero(&c->dma_status, sizeof(struct SI_DMA_STATUS));
-  send_command_yn(c->fd, cmd );
+  si_send_command_yn(c->fd, cmd );
 
 /* wait for DMA done */
 
@@ -870,9 +869,9 @@ int cmd;
 
   data[0] = cfg->index;
   data[1] = val;
-  send_command(c->fd, cmd );
-  send_n_ints( c->fd, 2, data );
-  ex = expect_yn( c->fd );
+  si_send_command(c->fd, cmd );
+  si_send_n_ints( c->fd, 2, data );
+  ex = si_expect_yn( c->fd );
 }
 
 
@@ -880,9 +879,9 @@ int cmd;
 send_readout( c )
 struct SI_CAMERA *c;
 {
-  send_command(c->fd, 'F'); // F    - Send Readout Parameters
-  send_n_ints( c->fd, 32, (int *)&c->readout );
-  expect_yn( c->fd );
+  si_send_command(c->fd, 'F'); // F    - Send Readout Parameters
+  si_send_n_ints( c->fd, 32, (int *)&c->readout );
+  si_expect_yn( c->fd );
 }
 
 vmatest(c)
@@ -968,7 +967,7 @@ struct SI_CAMERA *c;
       continue;
     }
 
-    send_command_yn(c->fd, 'D' );
+    si_send_command_yn(c->fd, 'D' );
 
 
     count = 0;

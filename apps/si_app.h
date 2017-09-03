@@ -137,25 +137,3 @@ struct SI_CAMERA {
   pthread_t fill;
   int side;
 };
-
-int load_camera_cfg( struct SI_CAMERA *, char *);
-int load_cfg( struct CFG_ENTRY **, char *, char *);
-char *name_cfg(char *);
-int send_command( int, int );
-int send_command_yn( int, int );
-
-
-int sendfile(int fd, int breaktime, char *filename);
-void init_com(int fd, int baud, int parity, int bits, int stopbits, int buffersize);
-int clear_buffer(int fd);
-int send_char(int fd, int data);
-int receive_char(int fd);
-int receive_n_ints(int fd, int n, int *data);
-int send_n_ints(int fd, int n, int *data);
-int swapl(int *d);
-int expect_yn(int fd);
-void send_break(int fd, int ms);
-int parse_cfg_string(struct CFG_ENTRY *entry);
-int setfile_readout(struct SI_CAMERA *c, char *file);
-struct CFG_ENTRY *find_readout(struct SI_CAMERA *c, char *name);
-

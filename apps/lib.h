@@ -1,0 +1,20 @@
+int si_sendfile( int fd, int breaktime, char *filename );
+void si_init_com( int fd, int baud, int parity, int bits,
+                  int stopbits, int buffersize );
+int si_send_command( int fd, int cmd );
+int si_clear_buffer( int fd );
+int si_send_char( int fd, int data );
+int si_receive_char( int fd );
+int si_receive_n_ints( int fd, int n, int *data );
+int si_send_n_ints( int fd, int n, int *data );
+int si_swapl( int *d );
+int si_expect_yn( int fd );
+void si_send_break( int fd, int ms );
+int si_load_camera_cfg( struct SI_CAMERA *c, char *fname );
+int si_load_cfg( struct CFG_ENTRY **e, char *fname, char *var );
+int si_parse_cfg_string( struct CFG_ENTRY *entry );
+char *si_name_cfg( char *cfg );
+void si_send_command_yn( int fd, int data );
+int si_setfile_readout( struct SI_CAMERA *c, char *file );
+struct CFG_ENTRY *si_find_readout( struct SI_CAMERA *c, char *name );
+void si_sprint_cfg_val_only( char *buf, struct CFG_ENTRY *cfg, int val );
