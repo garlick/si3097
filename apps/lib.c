@@ -28,6 +28,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <sys/mman.h>
 #include <unistd.h>
 #include <sys/ioctl.h>
+#include <errno.h>
 
 #include "si3097.h"
 #include "si_app.h"
@@ -394,9 +395,12 @@ void si_send_break( int fd, int ms )
 int si_load_camera_cfg( struct SI_CAMERA *c, char *fname )
 {
 
-  si_load_cfg( c->e_status, fname, "SP" );
-  si_load_cfg( c->e_readout, fname, "RFP" );
-  si_load_cfg( c->e_config, fname, "CP" );
+  if (si_load_cfg( c->e_status, fname, "SP" ) < 0)
+    return -1;
+  if (si_load_cfg( c->e_readout, fname, "RFP" ) < 0)
+    return -1;
+  if (si_load_cfg( c->e_config, fname, "CP" ) < 0)
+    return -1;
   return 0;
 }
 
@@ -414,41 +418,47 @@ int si_load_cfg( struct CFG_ENTRY **e, char *fname, char *var )
   FILE *fd;
   char buf[256];
   struct CFG_ENTRY *entry;
+  int rc = -1;
 
   varlen = strlen(var);
 
   if( !(fd = fopen(fname,"r")) ) {
     printf("unable to open %s\n", fname );
-    return -1;
+    goto done;
   }
 
   pindex = 0;
   while( fgets( buf, 256, fd )) {
     if( strncmp( buf, var, varlen ) == 0 ) {
        index = atoi( &buf[varlen] );
+       if( index!=pindex || index > 32 ) {
+         printf("%s: entry index is %d, expected %d\n", fname, index, pindex);
+         errno = EINVAL;
+         goto done;
+       }
        len = strlen(buf);
        len -=1;
        buf[len] = 0;
-       entry = (struct CFG_ENTRY *)malloc( sizeof(struct CFG_ENTRY ));
-       bzero( entry, sizeof(struct CFG_ENTRY ));
+       if (!(entry = calloc( 1, sizeof(*entry))))
+         return -1;
        entry->index = index;
        entry->cfg_string = (char *)malloc( len );
        strcpy( entry->cfg_string, buf );
        si_parse_cfg_string( entry );
-       if( index!=pindex || index > 32 ) {
-         printf("CFG error\n");
-         index = pindex;
+       if( pindex >= 32 ) {
+         printf("%s: entry %d would exceed array bounds\n", fname, pindex);
+         free (entry);
+         errno = EINVAL;
+         goto done;
        }
-
-       e[pindex] = entry; /* warning here no bounds check */
-       pindex++;
-       if( pindex >= 32 )
-         break;
+       e[pindex++] = entry;
     }
   }
-
-  fclose(fd);
-  return 0;
+  rc = 0;
+done:
+  if (fd)
+    fclose(fd);
+  return rc;
 }
 
 /* fill in all the parameters from the cfg_string */
