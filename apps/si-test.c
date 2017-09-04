@@ -29,6 +29,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <sys/ioctl.h>
 #include <unistd.h>
 #include <time.h>
+#include <getopt.h>
+#include <errno.h>
+#include <stdarg.h>
 
 #include "si3097.h"
 #include "si_app.h"
@@ -62,50 +65,102 @@ void io_readout( struct SI_CAMERA *c );
 void io_config( struct SI_CAMERA *a );
 int change_cfg( struct SI_CAMERA *c, struct CFG_ENTRY *cfg,
                 int value, int cmd );
-void send_readout( struct SI_CAMERA *c );
+int send_readout( struct SI_CAMERA *c );
 void vmatest( struct SI_CAMERA *c );
 void timeout_test( struct SI_CAMERA *c );
+char *xstrdup (const char *s);
+void usage ( void );
+void die ( const char *fmt, ... );
+
+const char *default_device = "/dev/si3097a";
+const char *default_setfile = NULL;
+const char *default_dspfile = NULL;
+const char *default_cfgfile = "Test.cfg";
+
+static char *dspfile = NULL;
+
+#define OPTIONS "f:c:s:d:"
+static const struct option longopts[] = {
+  {"file",       required_argument,   0, 'f'},
+  {"cfgfile",    required_argument,   0, 'c'},
+  {"setfile",    required_argument,   0, 's'},
+  {"dspfile",    required_argument,   0, 'd'},
+  {0, 0, 0, 0},
+};
 
 int main(int argc, char *argv[] )
 {
   struct SI_CAMERA *c;
-  char buf[256], file[256];
-  int verbose, i;
+  char *device = xstrdup (default_device);
+  char *cfgfile = xstrdup (default_cfgfile);
+  char *setfile = xstrdup (default_setfile);
+  char buf[256];
+  int verbose;
+  int ch;
 
-  c = ( struct SI_CAMERA *)malloc(sizeof(struct SI_CAMERA ));
-  bzero(c, sizeof(struct SI_CAMERA));
+  dspfile = xstrdup (default_dspfile);
 
-  strcpy( file, "/dev/si3097a" );
+  if (!(c = calloc(1, sizeof(*c))))
+    die ("out of memory\n");
 
-  for( i=1; i<argc; i++ ) {
-    if( strcmp( argv[i], "-dev" ) == 0 ) {
-      i++;
-      if( argv[i] )
-        strcpy( file, argv[i] );
+  while ((ch = getopt_long (argc, argv, OPTIONS, longopts, NULL)) != -1) {
+    switch (ch) {
+      case 'f': /* --device FILE */
+        free (device);
+        device = xstrdup (optarg);
+        break;
+      case 'c': /* --cfgfile FILE */
+        free (cfgfile);
+        cfgfile = xstrdup (optarg);
+        break;
+      case 's': /* --setfile FILE */
+        free (setfile);
+        setfile = xstrdup (optarg);
+        break;
+      case 'd': /* --dspfile FILE */
+        free (dspfile);
+        dspfile = xstrdup (optarg);
+        break;
+      case 'h':
+      default:
+        usage ();
     }
   }
 
-  if((c->fd = open( file, O_RDWR, 0 ))<0 ){
-    perror("si open" );
-    fprintf(stderr, "failed to open %s\n", file);
-    exit(1);
-  }
+  /* Load names for config and readout integer slots
+   */
+  if (si_load_camera_cfg( c, cfgfile ) < 0)
+    die ("%s: %s\n", cfgfile, strerror (errno));
 
+  /* Load default settings for camera
+   */
+  if (!setfile)
+    die ("Please indicate camera settings file with --setfile FILE\n");
+  if (si_setfile_readout( c, setfile ) < 0)
+    die ("%s: %s\n", setfile, strerror (errno));
+
+  /* Initiate communication with si3097 card.
+   * Configure UART between card and camera.
+   */
+  if((c->fd = open( device, O_RDWR, 0 ))<0 )
+    die ("%s: %s\n", device, strerror (errno));
   verbose = 1;
-  if( ioctl(c->fd, SI_IOCTL_VERBOSE, &verbose) <0 ) {
-    perror("verbose error");
-  }
+  if( ioctl(c->fd, SI_IOCTL_VERBOSE, &verbose) <0 )
+    die ("SI_IOCTL_VERBOSE: %s\n", device, strerror (errno));
+  si_init_com( c->fd, 57600, 0, 8, 1, 9000 );
 
-  si_init_com( c->fd, 57600, 0, 8, 1, 9000 ); /* setup uart for camera */
-  si_load_camera_cfg( c, "Test.cfg" );
-  si_setfile_readout( c, "800-299x1.set" );
-  send_readout( c );
-  si_send_command(c->fd, 'H');     // H    - load readout
-  si_receive_n_ints( c->fd, 32, (int *)&c->readout );
+  /* Store readout settings to camera.
+   * Then load readout settings from camera.
+   */
+  if (send_readout( c ) < 0)
+    die ("error sending readout params to camera: %s\n", strerror (errno));
+  if (si_send_command(c->fd, 'H') < 0)     // H    - load readout
+    die ("error sending H command: %s\n", strerror (errno));
+  if (si_receive_n_ints( c->fd, 32, c->readout ) < 0)
+    die ("error receiving readout params from camera: %s\n", strerror (errno));
   expect_y( c->fd );
 
   print_help();
-  //printf("WARNING initialization commented out\n");
 
   while(1) {
     printf("si3097> ");
@@ -117,6 +172,41 @@ int main(int argc, char *argv[] )
     }
     parse_commands( c, buf );
   }
+
+  free (device);
+  free (cfgfile);
+}
+
+void die (const char *fmt, ...)
+{
+    va_list ap;
+
+    va_start (ap, fmt);
+    vfprintf (stderr, fmt, ap);
+    va_end (ap);
+    exit (1);
+}
+
+
+void usage ( void )
+{
+  fprintf (stderr,
+"Usage: test_app OPTIONS\n"
+"    -f,--file=FILE      override default device file [%s]\n",
+           default_device);
+  exit (1);
+}
+
+char *xstrdup (const char *s)
+{
+  char *cpy = NULL;
+  if (s) {
+    if (!(cpy = strdup (s))) {
+      fprintf (stderr, "out of memory\n");
+      exit (1);
+    }
+  }
+  return cpy;
 }
 
 void parse_commands( struct SI_CAMERA *c, char *buf )
@@ -127,7 +217,10 @@ void parse_commands( struct SI_CAMERA *c, char *buf )
   static int verbose = 1;
 
   if( strncasecmp( buf, "sendfile", 8 ) == 0 ) {
-    si_sendfile( c->fd, 250, "2769d.bin" );
+    if (dspfile == NULL)
+      printf ("no dspfile set\n");
+    else
+      si_sendfile( c->fd, 250, dspfile );
   } else if( buf[0] == 'A' ) {
     si_send_command_yn(c->fd, 'A');  // A  - Open Shutter  returns Y/N
   } else if( buf[0] == 'B' ) {
@@ -704,8 +797,7 @@ void print_help( void )
   printf(" T        -  Cooler Off\n");
   printf(" O        -  Abort Readout\n");
   printf(" status   -  Print DMA status\n");
-  printf(" sendfile - initialization function. This loads the file \n");
-  printf("            2769d.bin into camera eeprom\n");
+  printf(" sendfile -  Load dspfile into camera eeprom\n");
   printf("dma  'cmd'- configure dma for 8 million bytes, start the dma\n");
   printf("            send the 'cmd' command to start a test download,\n");
   printf("            wait for completion\n");
@@ -864,11 +956,15 @@ int change_cfg( struct SI_CAMERA *c, struct CFG_ENTRY *cfg,
 
 
 
-void send_readout( struct SI_CAMERA *c )
+int send_readout( struct SI_CAMERA *c )
 {
-  si_send_command(c->fd, 'F'); // F    - Send Readout Parameters
-  si_send_n_ints( c->fd, 32, (int *)&c->readout );
-  si_expect_yn( c->fd );
+  if (si_send_command(c->fd, 'F') < 0) // F    - Send Readout Parameters
+    return -1;
+  if (si_send_n_ints( c->fd, 32, (int *)&c->readout ) < 0)
+    return -1;
+  if (si_expect_yn( c->fd ) != 1)
+    return -1;
+  return 0;
 }
 
 void vmatest( struct SI_CAMERA *c )
