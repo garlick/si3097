@@ -4,15 +4,16 @@ This card supports the 800 series cameras.
 
 This is [originally](http://si3097.cvs.sourceforge.net/)
 the work of Jeffrey Hagen, for the
-[Super-LOTS](https://en.wikipedia.org/wiki/Super-LOTIS) telescope.
+[Super-LOTIS](https://en.wikipedia.org/wiki/Super-LOTIS) telescope.
 
 I've done some work in this repo to get the kernel driver working
 on linux kernel 4.10, and the utilities working with a camera extracted
 from a Roche/454 FLX+ genome sequencer.
 
-Status:  driver compiles under 4.10, but is, as yet, untested.
-The test app seems to work with the (binary) driver supplied with Roche
-analyzer on 2.6.9 32-bit i386 kernel.
+Status:  driver compiles, loads, finds PCI card, and responds to
+the test app  under 4.10.  It has not yet been tested with a camera.
+The test app seems to work with the driver supplied with Roche analyzer
+(2.6.9 redhat EL kernel on ix86 arch).
 
 ### UART
 
