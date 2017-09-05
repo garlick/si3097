@@ -247,10 +247,10 @@ if( ioctl( fd, SI_IOCTL_VERBOSE, &verb )) {
 ### PROC
 
 The proc filesystem is supported in this driver. When the driver
-is loaded, the device /proc/si3097 is created. Reading /proc/si3097,
+is loaded, the device `/proc/si3097` is created. Reading `/proc/si3097`,
 creates one line of ascii for each found device, indicating the pci
 device slot, and major and minor numbers, making it easy for a script
-to create the device entries in /dev. (There is a script, cfg for one device.)
+to create the device entries in `/dev`. (There is a script, `cfg` for one device.)
 
 For example:
 ```
@@ -267,10 +267,9 @@ on module load.
 
 **maxever** (default 0) - If set to non-zero then the driver allocates that amount
 of memory at load time for each card found. It does the equivalent of
-`ioctl( fd, SI_IOCTL_DMA_INIT, &dma)` using the buflen and timeout parameters.
-
+`ioctl( fd, SI_IOCTL_DMA_INIT, &dma)` using the **buflen** and **timeout** parameters.
 On a running fragmented system, its possible for the contiguous
-memory allocation to fail. (I suppose if buflen is 8192, it would never have
+memory allocation to fail. (I suppose if **buflen** is 8192, it would never have
 a fragmentation problem.) This ensures the driver gets all the memory it
 needs at load time.  It also means you dont need to run something at load
 time to artificially allocate it.
