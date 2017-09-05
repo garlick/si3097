@@ -1,5 +1,5 @@
 [Camera Operation]
-CCD Type=CCD485
+CCD Type=CCD6161
 DSP Code File Name=3639A.bin
 Baud Rate=57600
 Low Temp Limit=-50.0
