@@ -1,6 +1,18 @@
 ### Spectral Instruments 3097 camera interface card driver
 
-For 800 series cameras.
+This card supports the 800 series cameras.
+
+This is [originally](http://si3097.cvs.sourceforge.net/)
+the work of Jeffrey Hagen, for the
+[Super-LOTS](https://en.wikipedia.org/wiki/Super-LOTIS) telescope.
+
+I've done some work in this repo to get the kernel driver working
+on linux kernel 4.10, and the utilities working with a camera extracted
+from a Roche/454 FLX+ genome sequencer.
+
+Status:  driver compiles under 4.10, but is, as yet, untested.
+The test app seems to work with the (binary) driver supplied with Roche
+analyzer on 2.6.9 32-bit i386 kernel.
 
 ### UART
 
