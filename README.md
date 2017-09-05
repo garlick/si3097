@@ -1,0 +1,319 @@
+### Spectral Instruments 3097 camera interface card driver
+
+For 800 series cameras.
+
+### UART
+
+The camera is configured by calls to the UART serial interface:
+
+Open the device:
+```c
+int fd;
+
+if( (fd = open( "/dev/si3097", O_RDWR, 0 )) <0 ) {
+  perror("si");
+  exit(1);
+}
+```
+
+Configure the UART:
+```c
+struct SI_SERIAL_PARAM param;
+
+param.flags = SI_SERIAL_FLAGS_BLOCK;
+param.baud  = 19200
+param.bits = 8;
+param.parity = 1;
+param.stopbits = 1;
+param.buffersize = 16384;
+param.fifotrigger = 8;
+param.timeout = 1000; /* 10 secs */
+
+if( ioctl( fd, SI_IOCTL_SERIAL_PARAMS, &param ) < 0 ) {
+  perror("si");
+  exit(1);
+}
+```
+
+Write characters to the UART with write:
+```c
+char c;
+
+c = 'C';
+if( write( fd, &c, 1 )!=1 ) {
+ perror("si");
+}
+```
+
+With blocking on (default), write blocks until the transmit queue
+is empty (or timeout).  To support legacy code, the length of the
+transmit queue can be queried with:
+```c
+if( ioctl( fd, SI_IOCTL_SERIAL_OUT_STATUS, &tlen )) {
+  perror("si");
+  exit(1);
+}
+```
+Where `tlen` holds the transmit count.
+
+To read the UART,
+```c
+int d;
+
+if( read( fd, &d, 4 )!=4 ) {
+ perror("si");
+}
+```
+
+With blocking on, read blocks until the number of requested characters are
+read or timeout. To support legacy code, the length of the receive queue can
+be queried with:
+```c
+int rlen;
+
+if( ioctl( fd, SI_IOCTL_SERIAL_IN_STATUS, &rlen )) {
+  perror("si");
+  exit(1);
+}
+```
+Where `rlen` holds the receive count.
+
+### DMA
+
+```c
+struct SI_DMA_CONFIG {
+  int maxever; /* max bytes you would ever need */
+  int nbuf;    /* number of buffers to configure */
+  int buflen;  /* length of buffer (bytes) */
+  int timeout; /* jiffies to timeout of DMA_WAIT */
+  unsigned int config; /* dma config mask */
+};
+
+struct SI_DMA_CONFIG dma_config;
+```
+
+Say you have a camera that produces 32MB of data,
+4096 x 4096 x 2 bytes.  And you want to deal with it
+in chunks of say 1 MB.
+```c
+dma_config.maxever = 32*1024*1024; /* max ever needed to xfer this open */
+dma_config.total = 4096*4096*2;    /* total this init */
+dma_config.buflen = 1024*1024;
+dma_config.timeout = 1000; /* 10 secs */
+dma_config.config = SI_DMA_CONFIG_WAKEUP_ONEND;
+
+if( ioctl( fd, SI_IOCTL_DMA_INIT, &dma_config )) {
+  perror("si");
+  exit(1);
+}
+```
+
+The dma buffers are mapped directly to the application's memory by use
+of mmap.
+```c
+unsigned short *data;
+
+data = (unsigned short *)mmap( 0, dma_config.maxever, PROT_READ, MAP_SHARED, fd, 0);
+```
+
+The memory is handled as follows. The very first `DMA_INIT` after the driver
+load, pci dma memory is allocated in chunks of buflen to a total of `maxever`
+bytes.  This memory is not freed until either a driver unload or a `FREEMEM`.
+The idea is to allocate the largest configuration for your camera and leave it.
+This simplifies issues of mmap, camera re-configuration and memory fragmentation.
+
+Start the dma:
+```c
+if( ioctl( fd, SI_IOCTL_DMA_START, 0 )) {
+  perror("si");
+  exit(1);
+}
+```
+
+This blocks until dma is ready or timeout:
+```c
+struct SI_DMA_STATUS dma_status;
+
+if( ioctl( fd, SI_IOCTL_DMA_NEXT, &dma_status )) {
+  perror("si");
+  exit(1);
+}
+```
+
+Then use `dma_status.next` to operate on the next buffer.
+For legacy code, or other uses, this polls DMA status and
+never blocks:
+```c
+if( ioctl( fd, SI_IOCTL_DMA_STATUS, &dma_status )) {
+  perror("si");
+  exit(1);
+}
+```
+
+For all calls that return an `SI_DMA_STATUS` structure,
+the values are as follows:
+
+**status** : This is the value of the dma status register. Use the macros
+`SI_DMA_STATUS_DONE` to know the dma is complete
+`SI_DMA_STATUS_ENABLE` tells you that the dma is enabled.
+
+**transferred** : the number of bytes transferred and will only be to
+the resolution of `buflen`.
+
+For use with the `SI_DMA_CONFIG_WAKEUP_EACH` option:
+
+**cur** : the current active sgl buffer
+
+**next** : the sgl buffer given to you by `DMA_NEXT`.  `next` will always
+be at least one behind `cur` when dma active.
+
+The poll function is implemented. This means the application could call
+`select(2)` and block for a read on the file descriptor.  By default, if dma
+is active, read poll returns a read ready when a buffer is available or
+dma is done.
+
+By setting `SI_IOCTL_SETPOLL` to `SI_SETPOLL_UART`:
+```c
+int poll = SI_SETPOLL_UART;
+if( ioctl( fd, SI_IOCTL_SETPOLL, &poll )) {
+  perror("si");
+  exit(1);
+}
+```
+
+Poll will return a read ready when there is data to be read on the
+receive buffer. One or the other is available per fd. Multiple opens would
+allow a multiplexed input on UART and dma operations.
+
+### Supported ioctls:
+
+`SI_IOCTL_RESET` - stops dma clears the fifos. resets the uart
+
+`SI_IOCTL_SERIAL_IN_STATUS` - returns the receive buffer count
+
+`SI_IOCTL_GET_SERIAL` - reads the serial IO parameters in struct `SI_SERIAL_PARAM`
+
+`SI_IOCTL_SET_SERIAL` - sets the serial IO parameters in struct `SI_SERIAL_PARAM`
+
+`SI_IOCTL_SERIAL_BREAK` - sends the break command with integer delay of msecs
+
+`SI_IOCTL_SERIAL_OUT_STATUS` - returns the transmit buffer count
+
+`SI_IOCTL_DMA_INIT` - configures and allocates memory for the DMA using
+struct `SI_DMA_CONFIG`
+
+`SI_IOCTL_DMA_START` - starts the DMA, returns the  struct `SI_DMA_STATUS`
+
+`SI_IOCTL_DMA_END` - abort the dma if in progress, returns struct `SI_DMA_STATUS`
+
+`SI_IOCTL_DMA_STATUS` - used for polling the struct `SI_DMA_STATUS`
+
+`SI_IOCTL_DMA_ABORT` - aborts the dma, returns  struct `SI_DMA_STATUS`
+
+`SI_IOCTL_DMA_NEXT` - blocks until next buffer or DMA done, returns
+struct `SI_DMA_STATUS`
+
+`SI_IOCTL_VERBOSE` - mask, sets the verbose mode of the driver
+(valid bits: `SI_VERBOSE_SERIAL`, `SI_VERBOSE_DMA`)
+
+`SI_IOCTL_SETPOLL` - boolean integer, sets the functionality
+
+`SI_IOCTL_FREEMEM` - frees maxever memory. call this after munmap whenever
+you want to increase maxever.  (Most apps shouldn't need to do this.)
+
+Ioctls always pass a pointer, as in:
+```c
+int verb = SI_VERBOSE_DMA;
+if( ioctl( fd, SI_IOCTL_VERBOSE, &verb )) {
+
+  perror("si");
+  exit(1);
+}
+```
+
+### PROC
+
+The proc filesystem is supported in this driver. When the driver
+is loaded, the device /proc/si3097 is created. Reading /proc/si3097,
+creates one line of ascii for each found device, indicating the pci
+device slot, and major and minor numbers, making it easy for a script
+to create the device entries in /dev. (There is a script, cfg for one device.)
+
+For example:
+```
+cat /proc/si3097
+SI 0000:05:00.0, major 254 minor 0 devfn 0 irq 209 isopen 0
+```
+
+### Module parameters:
+
+There are several initialization/module load parameters which can be set
+on module load.
+
+**verbose** (default 0) - set the default verbosity mask as described above
+
+**maxever** (default 0) - If set to non-zero then the driver allocates that amount
+of memory at load time for each card found. It does the equivalent of
+`ioctl( fd, SI_IOCTL_DMA_INIT, &dma)` using the buflen and timeout parameters.
+
+On a running fragmented system, its possible for the contiguous
+memory allocation to fail. (I suppose if buflen is 8192, it would never have
+a fragmentation problem.) This ensures the driver gets all the memory it
+needs at load time.  It also means you dont need to run something at load
+time to artificially allocate it.
+
+**buflen** (default 1048576)
+
+**timeout** (default 5000)
+
+### Camera commands
+
+The camera is controlled by the following commands. All characters sent to the
+camera are returned for verification. Then returned information is sent
+by the camera.
+
+**A** - Open Shutter, returns Y/N
+
+**B** - Close Shutter, returns Y/N
+
+**I** - Get camera status, returns 16 unsigned 32 bit values  and Y/N byte
+
+**H** - Load Readout Parameters, returns 32 unsigned 32 bit values  and Y/N byte
+
+**F** - Send Readout Parameters, send 32 unsigned 32 bit values following,
+return Y/N byte
+
+**G** - Send One Readout Parameters, send one 32 bit offset, send one 32 bit value,
+returns Y/N byte
+
+**L** - Load Configuration Parameters, returns 32 unsigned 32 bit values
+and Y/N byte
+
+**J** - Send Configuration Parameters, send 32 unsigned 32 bit values following,
+returns Y/N byte
+
+**K** - Send One Configuration Parameters, send one 32 bit offset,
+send one 32 bit value, returns Y/N byte
+
+**C** - Image Test, requests a test image, wants DMA active
+
+**D** - Image Expose request regular image with shuttered exposure,
+wants DMA active
+
+**E** - Image Read, requests a dark image with closed shutter,
+wants DMA active
+
+**Z** - Image Tdi, requests a tdi image, wants DMA active
+
+**S** - Cooler On, no response
+
+**T** - Cooler Off, no response
+
+**P** - Eeprom read, causes the EEPROM in the camera to be
+read into the camera's configuration buffer.
+
+**M** - Eeprom write, causes the camera's configuration buffer
+to be copied to the camera's EEPROM.
+
+**0** - Abort Readout, aborts an ongoing exposure (camera cannot
+be stopped during actual readout)
