@@ -78,6 +78,7 @@ const char *default_dspfile = NULL;
 const char *default_cfgfile = "Test.cfg";
 
 static char *dspfile = NULL;
+static int verbose = SI_VERBOSE_SERIAL | SI_VERBOSE_DMA;
 
 #define OPTIONS "f:c:s:d:"
 static const struct option longopts[] = {
@@ -95,7 +96,6 @@ int main(int argc, char *argv[] )
   char *cfgfile = xstrdup (default_cfgfile);
   char *setfile = xstrdup (default_setfile);
   char buf[256];
-  int verbose;
   int ch;
 
   dspfile = xstrdup (default_dspfile);
@@ -144,7 +144,6 @@ int main(int argc, char *argv[] )
    */
   if((c->fd = open( device, O_RDWR, 0 ))<0 )
     die ("%s: %s\n", device, strerror (errno));
-  verbose = 1;
   if( ioctl(c->fd, SI_IOCTL_VERBOSE, &verbose) <0 )
     die ("SI_IOCTL_VERBOSE: %s\n", device, strerror (errno));
   si_init_com( c->fd, 57600, 0, 8, 1, 9000 );
@@ -214,7 +213,6 @@ void parse_commands( struct SI_CAMERA *c, char *buf )
   char *delim = " \t\n";
   char *s;
   static int repeat = 1;
-  static int verbose = 1;
 
   if( strncasecmp( buf, "sendfile", 8 ) == 0 ) {
     if (dspfile == NULL)
@@ -275,11 +273,18 @@ void parse_commands( struct SI_CAMERA *c, char *buf )
     else
       repeat = 1;
   } else if( strncmp( buf, "verb", 4 )== 0 ) {
-    verbose = (verbose+1)%2;
+    switch (verbose) {
+      case 0:
+        verbose = SI_VERBOSE_SERIAL | SI_VERBOSE_DMA;
+        break;
+      case (SI_VERBOSE_SERIAL | SI_VERBOSE_DMA):
+        verbose = 0;
+        break;
+    }
     if( ioctl(c->fd, SI_IOCTL_VERBOSE, &verbose) <0 ) {
       perror("verbose error");
     }
-    printf("Verbose set to %s\n", verbose?"ON":"OFF");
+    printf("Verbose set to 0x%x\n", verbose);
   } else if( strncmp( buf, "crash", 5 )== 0 ) {
     crash(c);
   } else if( strncmp( buf, "image", 5 )== 0 ) {
@@ -807,7 +812,7 @@ void print_help( void )
   printf("                       Z tdi image\n");
   printf("stopdma  - issue stopdma for testing\n");
   printf("repeat   - number of times to do dma\n");
-  printf("verbose  - toggle verbose\n");
+  printf("verbose  - toggle verbose flag\n");
   printf("change_readout  - changed readout params\n");
   printf("change_config  - changed config params\n");
   printf("image [cmd]  - take image based on readout params\n");
