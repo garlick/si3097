@@ -7,13 +7,31 @@ the work of Jeffrey Hagen, for the
 [Super-LOTIS](https://en.wikipedia.org/wiki/Super-LOTIS) telescope.
 
 I've done some work in this repo to get the kernel driver working
-on linux kernel 4.10, and the utilities working with a camera extracted
-from a Roche/454 FLX+ genome sequencer.
+with a newer Linux kernel (4.x), and the test utility working with an
+800-series camera extracted from a Roche/454 FLX+ genome sequencer.
 
-Status:  driver compiles, loads, finds PCI card, and responds to
-the test app  under 4.10.  It has not yet been tested with a camera.
-The test app seems to work with the driver supplied with Roche analyzer
-(2.6.9 redhat EL kernel on ix86 arch).
+Status:  si-test and si-dump seem to work with both this driver on
+linux-4.10 (i686 arch), and the one supplied with the sequencer on
+linux-2.6.9-RHEL (i386 arch).  At least UART based control works,
+and DMA transfer something that _could_ be image data.
+
+Untested: architectures other than i686 (32-bit), si-image GUI test app,
+validity of image data.
+
+### To build and test
+
+```
+$ sudo apt-get install libgtk2.0-dev  # prereq for si-image
+$ cd driver
+$ make
+$ sudo insmod ./si3097.ko
+$ cd ..
+$ sudo ./cfg
+$ cd apps
+$ make
+$ ./si-dump L
+$ ./si-test --setfile 800-1134.set  # substitute your camera's set file
+```
 
 ### UART
 
