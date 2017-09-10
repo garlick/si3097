@@ -1,0 +1,71 @@
+[Camera Operation]
+CCD Type=CCD6161
+DSP Code File Name=3639A.bin
+Baud Rate=19200
+Low Temp Limit=-50.0
+High Pressure Limit=7.00
+Pressure@Temp Temperature=-50.0
+Pressure@Temp Pressure=7.00
+Triggered Acquisition=TRUE
+High Temp Limit=-10.0
+TDI Ext.=FALSE
+TDI Int.=FALSE
+Timeout=2.0
+Frames=FALSE
+
+[Additional Parameters]
+Cooler?=TRUE
+Readout Speed=0
+
+[Readout & Format]
+Serial Origin=17
+Serial Length=2048
+Serial Binning=1
+Serial Post Scan=0
+Parallel Origin=32
+Parallel Length=2048
+Parallel Binning=1
+Parallel Post Scan=0
+Exposure Time (ms)=1000
+Continuous Clear Disable=2
+DSI Sample Time=19
+Analog Attenuation=0
+Port 1 Digital Offset=579
+Port 2 Digital Offset=586
+Port 3 Digital Offset=582
+Port 4 Digital Offset=590
+TDI Delay=0
+Not Used=0
+Port 1 ADC offset=35162
+Port 2 ADC offset=35091
+Port 3 ADC offset=35055
+Port 4 ADC offset=35495
+
+[Readout Speed Info]
+Readout Speeds Available=1
+Readout Speed 0=750000
+DSI Sample Time 0=19
+Attenuation 0=0
+Port 1 Offset 0=200
+Port 2 Offset 0=200
+Port 3 Offset 0=200
+Port 4 Offset 0=199
+
+[Configuration]
+Instrument Model=804
+Instrument SN=371
+Hardware Revision=0
+Serial Phasing=0
+Serial Split=1
+Serial Size=2080
+Parallel Phasing=0
+Parallel Split=1
+Parallel Size=2080
+Parallel Shift Delay=120
+Number of Ports=3
+Shutter Close Delay=20
+CCD Temp. Setpoint Offset=77
+Not Used=0
+CCD Temp. Setpoint=2480
+Port Select=10
+Acquisition mode=0
