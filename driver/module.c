@@ -31,6 +31,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <linux/poll.h>
 #include <linux/pci.h>
 #include <linux/delay.h>
+#include <linux/cdev.h>
 #include <asm/atomic.h>
 
 #include "si3097.h"
@@ -74,7 +75,9 @@ static struct pci_device_id si_pci_tbl[] __initdata = {
 
 static spinlock_t spin_multi_devs; /* use this for configure_device */
 static struct pci_driver si_driver;
-static int si_major = 0;
+static dev_t si_dev;
+static struct class *si_class;
+static struct cdev si_cdev;
 
 
 MODULE_DEVICE_TABLE( pci, si_pci_tbl);
@@ -95,11 +98,11 @@ int si_show_proc(struct seq_file *seq, void *private)
     if( pci ) {
       seq_printf( seq,
         "SI %s, major %d minor %d devfn %d irq %d isopen %d\n",
-                   pci_name(pci), si_major, nr, pci->devfn, pci->irq,
+                   pci_name(pci), MAJOR(si_dev), nr, pci->devfn, pci->irq,
                    atomic_read(&d->isopen)  );
 
     } else {
-      seq_printf( seq, "SI TEST major %d minor %d\n", si_major, nr);
+      seq_printf( seq, "SI TEST major %d minor %d\n", MAJOR(si_dev), nr);
     }
   }
   return 0;
@@ -278,6 +281,8 @@ const struct pci_device_id *id;
     dev->dma_cfg.config = SI_DMA_CONFIG_WAKEUP_ONEND;
     si_config_dma( dev );
   }
+  device_create(si_class, NULL, MKDEV(MAJOR(si_dev), nr),
+                NULL, "sicamera%d", nr);
 
   return(0);
 out:
@@ -292,13 +297,6 @@ out:
 
 static int __init si_init_module(void)
 {
-  int result;
-
-
-  si_major = 0; /* let OS assign */
-
-
-
   spin_lock_init( &spin_multi_devs );
 
   memset( &si_driver, 0, sizeof(struct pci_driver));
@@ -306,10 +304,28 @@ static int __init si_init_module(void)
   si_driver.id_table = si_pci_tbl;
   si_driver.probe = si_configure_device;
 
+  if (alloc_chrdev_region(&si_dev, 0, SI_MAX_CARDS, "si3097") < 0) {
+    printk(KERN_ERR "SI alloc_chrdev_region failed");
+    return (-1);
+  }
+  if (!(si_class = class_create(THIS_MODULE, "chardrv"))) {
+    printk(KERN_ERR "SI class_create failed");
+    goto out_reg;
+  }
+  cdev_init(&si_cdev, &si_fops);
+  if (cdev_add(&si_cdev, si_dev, SI_MAX_CARDS) < 0) {
+    printk(KERN_ERR "SI cdev_add failed");
+    goto out_class;
+  }
+
+  if (!(si_proc = proc_create ("si3097", 0, NULL, &si_proc_fops))) {
+    printk(KERN_ERR "SI proc_create failed");
+    goto out_cdev;
+  }
+
 //#define NO_HW_TEST 1
 
 #ifdef NO_HW_TEST
-
     si_count = 1;
     dev = &si_devices[0];
     printk("SI TEST device configured\n");
@@ -318,35 +334,36 @@ static int __init si_init_module(void)
     spin_lock_init( &dev->uart_lock );
     spin_lock_init( &dev->dma_lock );
 #else
-
-  if( pci_register_driver( &si_driver ) < 0 )
-    return -EIO;
-
+  if( pci_register_driver( &si_driver ) < 0 ) {
+    printk(KERN_ERR "SI pci_register_driver failed");
+    goto out_proc;
+  }
   if( si_count == 0 ) {
     pci_unregister_driver( &si_driver );
     printk("SI no cards found\n");
-    return(-ENODEV);
+    goto out_proc;
   }
-
 #endif
-  si_major = 0;
-  if((result = register_chrdev(0, "si3097", &si_fops) )<0 ) {
-    printk(KERN_WARNING "SI: can't get major %d\n",si_major);
-    return result;
-  }
-
-  si_major = result; /* dynamic */
-
-  if (!(si_proc = proc_create ("si3097", 0, NULL, &si_proc_fops)))
-    return -ENOMEM;
 
   return 0; /* succeed */
+
+out_proc:
+    remove_proc_entry( "si3097", 0 );
+out_cdev:
+  cdev_del(&si_cdev);
+out_class:
+  class_destroy(si_class);
+out_reg:
+  unregister_chrdev_region(si_dev, SI_MAX_CARDS);
+  return(-1);
 }
 
 static void __exit si_cleanup_module(void)
 {
   struct SIDEVICE *dev;
   int nr;
+
+  cdev_del(&si_cdev);
 
   for (nr = 0; nr < si_count; nr++) {
     dev = &si_devices[nr];
@@ -360,12 +377,15 @@ static void __exit si_cleanup_module(void)
       pci_release_regions( dev->pci );
       pci_disable_device( dev->pci );
     }
+    device_destroy(si_class, MKDEV(MAJOR(si_dev), nr));
   }
+
+  class_destroy(si_class);
+  unregister_chrdev_region(si_dev, SI_MAX_CARDS);
 
 #ifndef NO_HW_TEST
   pci_unregister_driver( &si_driver );
 #endif
-  unregister_chrdev(si_major, "si3097");
 
   if( si_proc )
     remove_proc_entry( "si3097", 0 );
