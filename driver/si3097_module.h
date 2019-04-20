@@ -28,13 +28,11 @@ struct UART {
 /* device structure for one SI card */
 
 struct SIDEVICE {
-  struct SIDEVICE *next;   /* one for each card */
   struct pci_dev *pci;     /* device found by kernel        */
   spinlock_t uart_lock;    /* protection for uart registers */
   spinlock_t dma_lock;     /* protection for dma registers  */
   spinlock_t nopage_lock;  /* protection for nopage/mmap  */
   atomic_t isopen;         /* true when device is open      */
-  int minor;
   __u32 bar[4];  /*  PCI bus address mappings */ 
   unsigned int bar_len[4]; /* length of PCI bus address mappings */
   atomic_t vmact;          /* number of vma opens */
