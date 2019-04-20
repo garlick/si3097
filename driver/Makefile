@@ -1,5 +1,6 @@
 KERNEL_VERSION ?= $(shell uname -r)
 KERNEL_PATH ?= /lib/modules/$(KERNEL_VERSION)/build
+CONFIG_MODULE_SIG=n
 
 obj-m += si3097.o
 
