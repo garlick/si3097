@@ -72,8 +72,14 @@ void si_vmaclose( struct vm_area_struct *area )
 /* when the application faults this routine is called to map the data */
 
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 11, 0)
 int si_vmafault( struct vm_area_struct *vma, struct vm_fault *vmf )
 {
+#else
+int si_vmafault( struct vm_fault *vmf )
+{
+  struct vm_area_struct *vma = vmf->vma;
+#endif
   unsigned int loff, off;
   int nbuf;
   void *vaddr;
