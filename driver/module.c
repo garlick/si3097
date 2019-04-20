@@ -58,7 +58,7 @@ module_param( maxever, int,  0 );
 int timeout = 5000;  /* default jiffies */
 module_param( timeout, int,  0 );
 
-int verbose = 1;
+int verbose = 0;
 module_param( verbose, int,  0 ); 
 
 
@@ -147,7 +147,6 @@ const struct pci_device_id *id;
   __u32 reg;
   int nr = si_count;
 
-  printk("SI configure device\n");
   if (nr == SI_MAX_CARDS) {
     printk(KERN_INFO "SI ignoring card - max %d\n", SI_MAX_CARDS);
     return(-EINVAL);
@@ -164,7 +163,6 @@ const struct pci_device_id *id;
 
   dev = &si_devices[nr];
   memset(dev, 0, sizeof(struct SIDEVICE));
-  dev->verbose = 1;
   si_count++;
 
   spin_unlock( &spin_multi_devs );
@@ -257,7 +255,6 @@ const struct pci_device_id *id;
 
 //  reg = PLX_REG_READ( dev, PCI9054_INT_CTRL_STAT);
 
-  printk("SI device %d driver loaded, intr stat 0x%x\n", nr, reg );
 //  reg = PLX_REG_READ(dev, PCI9054_DMA0_MODE );
 //  printk("SI mode 0x%x\n", reg );
 
@@ -274,7 +271,6 @@ const struct pci_device_id *id;
     if( buflen > maxever )
       buflen = maxever;
 
-    printk( "SI initial load configuring memory to %d\n", maxever );
     dev->dma_cfg.total = maxever;
     dev->dma_cfg.buflen = buflen;
     dev->dma_cfg.timeout = timeout;
@@ -305,8 +301,6 @@ static int __init si_init_module(void)
 
   spin_lock_init( &spin_multi_devs );
 
-  printk("SI init module\n");
-
   memset( &si_driver, 0, sizeof(struct pci_driver));
   si_driver.name = "si3097";
   si_driver.id_table = si_pci_tbl;
@@ -325,7 +319,6 @@ static int __init si_init_module(void)
     spin_lock_init( &dev->dma_lock );
 #else
 
-  printk("SI looking for card\n");
   if( pci_register_driver( &si_driver ) < 0 )
     return -EIO;
 
@@ -340,9 +333,7 @@ static int __init si_init_module(void)
   if((result = register_chrdev(0, "si3097", &si_fops) )<0 ) {
     printk(KERN_WARNING "SI: can't get major %d\n",si_major);
     return result;
-  } else 
-    printk("SI configuring %d cards, major number %d\n", 
-      si_count , result );
+  }
 
   si_major = result; /* dynamic */
 
@@ -356,8 +347,6 @@ static void __exit si_cleanup_module(void)
 {
   struct SIDEVICE *dev;
   int nr;
-
-  printk( "SI cleanup\n" );
 
   for (nr = 0; nr < si_count; nr++) {
     dev = &si_devices[nr];
@@ -411,9 +400,6 @@ int si_open (struct inode *inode, struct file *filp)
 
   int_stat = PLX_REG_READ( dev, PCI9054_INT_CTRL_STAT );
 
-  printk( "SI open verbose %d isopen %d minor %d int_stat 0x%x\n", 
-    dev->verbose, atomic_read(&dev->isopen), minor, int_stat );
-
   return 0;          /* success */
 }
 
@@ -443,7 +429,6 @@ int si_close(struct inode *inode, struct file *filp) /* close */
   }
 
   filp->private_data = NULL;
-  printk( "SI close %d\n", atomic_read(&dev->isopen) );
   module_put(THIS_MODULE);
     
   return 0;
