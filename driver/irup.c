@@ -1,6 +1,6 @@
 /*
 
-Linux 2.6 Driver for the
+Linux Driver for the
 Spectral Instruments 3097 Camera Interface
 
 Copyright (C) 2006  Jeffrey R Hagen

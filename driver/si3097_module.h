@@ -1,6 +1,6 @@
 
 /* This file holds the defines and internal structures
-   for the linux 2.6 driver for the
+   for the linux driver for the
    Spectral Instruments 3097 Interface card
 */
 
