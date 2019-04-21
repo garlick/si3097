@@ -142,10 +142,8 @@ struct SIDMA_SGL {
   __u32 ladr;   /* DMA channel local address */
   __u32 siz;    /* transfer size (bytes) */
   __u32 dpr;    /* descriptor pointer */
-  __u32 cpu;    /* kernel virual address of padr */
-  __u32 fill;   /* pad out to 16-byte clean */
-  __u32 fill2;   /* pad out to 16-byte clean */
-  __u32 fill3;   /* pad out to 16-byte clean */
+  void *cpu;    /* kernel virual address of padr */
+  __u8 fill[16 - sizeof (void *)];   /* pad out to 16-byte clean */
 };
 
 

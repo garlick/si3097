@@ -274,7 +274,7 @@ struct SIDEVICE *dev;
 
     last = (dma_addr_t)ch_dma & 0xfffffff0;
     setb = ((nb+1)&0x7f); /* set mem to see mmap working */
-    memset( (void *)ch->cpu, setb, sm_buflen );
+    memset( ch->cpu, setb, sm_buflen );
 
   }
 /* always wake up at the end */
@@ -371,7 +371,7 @@ struct SIDEVICE *dev;
     ch_dma = dev->sgl_pci + sizeof(struct SIDMA_SGL )*nb; /*bus side address*/
     ch->padr = (__u32)dma_buf;
     ch->ladr = local_addr;
-    ch->cpu = (__u32)cpu;
+    ch->cpu = cpu;
     ch->siz = 0;
     ch->dpr = 0;
     dev->total_allocs++;
@@ -459,7 +459,7 @@ struct SIDEVICE *dev;
       page++;
     }
 
-    dma_free_coherent(&dev->pci->dev, sm_buflen, (void *)ch->cpu, ch->padr);
+    dma_free_coherent(&dev->pci->dev, sm_buflen, ch->cpu, ch->padr);
     total_frees++;
     total_bytes += dev->dma_cfg.buflen;
   }
