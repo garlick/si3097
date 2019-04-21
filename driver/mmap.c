@@ -129,9 +129,7 @@ static struct vm_operations_struct si_vm_ops = {
   .fault = si_vmafault
 };
 
-int si_mmap(filp, vma )
-struct file *filp;
-struct vm_area_struct *vma;
+int si_mmap(struct file *filp, struct vm_area_struct *vma)
 {
   struct SIDEVICE *dev;
 
@@ -158,8 +156,7 @@ struct vm_area_struct *vma;
    the kernel side virt address of the hardware address 
 */
 
-int si_config_dma( dev )
-struct SIDEVICE *dev;
+int si_config_dma(struct SIDEVICE *dev)
 {
   int nchains, nb, nbytes;
   unsigned int end_mask;
@@ -297,8 +294,7 @@ struct SIDEVICE *dev;
 
 /* allocate memory */
 
-int si_alloc_memory( dev )
-struct SIDEVICE *dev;
+int si_alloc_memory(struct SIDEVICE *dev)
 {
   int nbuf, buflen, sm_buflen, nb;
   struct SIDMA_SGL *ch;
@@ -389,8 +385,7 @@ struct SIDEVICE *dev;
  return 0;
 }
 
-void si_print_memtable( dev )
-struct SIDEVICE *dev;
+void si_print_memtable(struct SIDEVICE *dev)
 {
   int nb;
   struct SIDMA_SGL *ch;
@@ -411,8 +406,7 @@ struct SIDEVICE *dev;
   }
 }
 
-void si_free_sgl( dev )
-struct SIDEVICE *dev;
+void si_free_sgl(struct SIDEVICE *dev)
 {
   int n, nchains;
   struct SIDMA_SGL *ch, *dchain;
@@ -483,8 +477,7 @@ struct SIDEVICE *dev;
 
 /* start configured dma */
 
-int si_start_dma(dev)
-struct SIDEVICE *dev;
+int si_start_dma(struct SIDEVICE *dev)
 {
   int n_pixels;
   int rb_count;
@@ -556,9 +549,7 @@ struct SIDEVICE *dev;
 
 /* stop running dma */
 
-int si_stop_dma(dev, status )
-struct SIDEVICE *dev;
-struct SI_DMA_STATUS *status;
+int si_stop_dma(struct SIDEVICE *dev, struct SI_DMA_STATUS *status)
 {
   unsigned long flags;
   int ret;
@@ -596,9 +587,7 @@ struct SI_DMA_STATUS *status;
 
 /* no block status request */
 
-int si_dma_status(dev, stat)
-struct SIDEVICE *dev;
-struct SI_DMA_STATUS *stat;
+int si_dma_status(struct SIDEVICE *dev, struct SI_DMA_STATUS *stat)
 {
   if( !stat )
     return 0;
@@ -614,9 +603,7 @@ struct SI_DMA_STATUS *stat;
 
 /* block for next buffer complete */
 
-int si_dma_next(dev, stat)
-struct SIDEVICE *dev;
-struct SI_DMA_STATUS *stat;
+int si_dma_next(struct SIDEVICE *dev, struct SI_DMA_STATUS *stat)
 {
   int next, cur, ret, tmout;
   unsigned long flags;
@@ -667,8 +654,7 @@ struct SI_DMA_STATUS *stat;
 
 /* true if its time to wakeup dma_block */
 
-int si_dma_wakeup( dev )
-struct SIDEVICE *dev;
+int si_dma_wakeup(struct SIDEVICE *dev)
 {
   int ret;
   int done;
@@ -691,8 +677,7 @@ struct SIDEVICE *dev;
 
 /* wait for vma close */
 
-int si_wait_vmaclose( dev )
-struct SIDEVICE *dev;
+int si_wait_vmaclose(struct SIDEVICE *dev)
 {
   int tmout;
 
@@ -716,8 +701,7 @@ struct SIDEVICE *dev;
 
 /* return byte count progress */
 
-int si_dma_progress( dev )
-struct SIDEVICE *dev;
+int si_dma_progress(struct SIDEVICE *dev)
 {
   __u32 pci;
   int nb, nchains, prog;
@@ -751,9 +735,7 @@ struct SIDEVICE *dev;
 }
 
 
-void *jeff_alloc( size, pphy )
-int size;
-dma_addr_t *pphy;
+void *jeff_alloc(int size, dma_addr_t *pphy)
 {
   unsigned char *km;
 //  unsigned int phy, phy_ix;

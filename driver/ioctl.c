@@ -238,8 +238,7 @@ long si_ioctl( struct file *filp, unsigned int cmd, unsigned long  args )
 }
 
 
-int si_reset( dev )
-struct SIDEVICE *dev;
+int si_reset(struct SIDEVICE *dev)
 {
   if( dev->verbose )
     printk("SI master local reset\n" );

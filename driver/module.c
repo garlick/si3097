@@ -137,11 +137,8 @@ struct file_operations si_fops = {
 };
 
 
-static int si_configure_device( struct pci_dev *, const struct pci_device_id *);
-
-static int si_configure_device(pci, id)
-struct pci_dev *pci;
-const struct pci_device_id *id;
+static int si_configure_device(struct pci_dev *pci,
+                               const struct pci_device_id *id)
 {
   struct SIDEVICE *dev;
   unsigned char irup;
@@ -452,11 +449,7 @@ int si_close(struct inode *inode, struct file *filp) /* close */
 /* si_read polls data from uart */
 /* si_read does not block */
 
-ssize_t si_read( filp, buf, count, off )
-struct file *filp;
-char __user *buf;
-size_t count;
-loff_t *off;
+ssize_t si_read(struct file *filp, char __user *buf, size_t count, loff_t *off)
 {
   struct SIDEVICE *dev;
   int i, blocking, ret;
@@ -507,11 +500,8 @@ loff_t *off;
 /* si_write operates on the SI uart interface                       */
 /* if blocking then it blocks till done writing */
 
-ssize_t si_write(filp, buf, count, off )
-struct file *filp;
-const char __user *buf;
-size_t count;
-loff_t *off;
+ssize_t si_write(struct file *filp, const char __user *buf,
+                 size_t count, loff_t *off)
 {
   int i, ret, blocking;
   struct SIDEVICE *dev;
@@ -569,8 +559,7 @@ loff_t *off;
 
 /* true when UART transmit buffer is empty */
 
-int si_uart_tx_empty( dev )
-struct SIDEVICE *dev;
+int si_uart_tx_empty(struct SIDEVICE *dev)
 {
   unsigned long flags;
   int ret;
@@ -583,8 +572,7 @@ struct SIDEVICE *dev;
 
 /* true when UART has data */
 
-int si_uart_read_ready( dev )
-struct SIDEVICE *dev;
+int si_uart_read_ready(struct SIDEVICE *dev)
 {
   unsigned long flags;
   int ret;

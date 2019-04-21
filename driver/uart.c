@@ -45,8 +45,7 @@ void si_get_serial_params(struct SIDEVICE *dev, struct SI_SERIAL_PARAM *sp)
   sp->buffersize  = dev->Uart.serialbufsize;
 }
 
-void si_uart_clear( dev ) 
-struct SIDEVICE *dev;
+void si_uart_clear(struct SIDEVICE *dev)
 {
   unsigned long flags;
   int clr;
