@@ -521,7 +521,7 @@ loff_t *off;
   blocking = (dev->Uart.block & SI_SERIAL_FLAGS_BLOCK)!=0;
 
   if( dev->verbose & SI_VERBOSE_SERIAL)
-    printk("SI write, count %d\n", count );
+    printk("SI write, count %lu\n", (unsigned long)count);
 
   if( dev->test ) {
     for (i=0; i < count; i++) {     // for all characters

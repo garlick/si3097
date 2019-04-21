@@ -138,8 +138,8 @@ struct vm_area_struct *vma;
   dev = (struct SIDEVICE *)filp->private_data;
 
   if( dev->verbose )
-    printk("SI mmap vmact %d ptr 0x%x\n", 
-         atomic_read(&dev->vmact), (unsigned int)vma->vm_file );
+    printk("SI mmap vmact %d ptr 0x%lx\n",
+         atomic_read(&dev->vmact), (unsigned long)vma->vm_file );
 
   vma->vm_ops = &si_vm_ops;
   vma->vm_file = filp;
@@ -285,8 +285,8 @@ struct SIDEVICE *dev;
 
 
   if( dev->verbose ) {
-    printk("SI si_config_dma sgl 0x%x sgl_pci 0x%x buflen %d sm_buflen %d nbuf %d\n", 
-     (unsigned int)dev->sgl, (unsigned int)dev->sgl_pci, 
+    printk("SI si_config_dma sgl 0x%lx sgl_pci 0x%x buflen %d sm_buflen %d nbuf %d\n",
+     (unsigned long)dev->sgl, (unsigned int)dev->sgl_pci,
      buflen, sm_buflen, nbuf  );
     if( isalloc )
       si_print_memtable( dev );
@@ -404,9 +404,9 @@ struct SIDEVICE *dev;
   for( nb=0; nb< dev->dma_nbuf; nb++ ) {
     ch = &dev->sgl[nb];
     if( dev->verbose )
-      printk("SI 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n", 
-      (__u32)dev->sgl + sizeof(struct SIDMA_SGL)* nb, 
-        ch->padr, ch->ladr, ch->siz, ch->dpr, ch->cpu );
+      printk("SI 0x%lx 0x%x 0x%x 0x%x 0x%x 0x%lx\n",
+      (unsigned long)dev->sgl + sizeof(struct SIDMA_SGL)* nb,
+        ch->padr, ch->ladr, ch->siz, ch->dpr, (unsigned long)ch->cpu );
     ch++;
   }
 }
