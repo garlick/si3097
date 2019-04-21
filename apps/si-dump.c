@@ -36,7 +36,7 @@
 
 #include "si3097.h"
 
-const char *device = "/dev/si3097a";
+const char *device = "/dev/sicamera0";
 
 void die (const char *fmt, ...)
 {
@@ -54,16 +54,16 @@ void die (const char *fmt, ...)
  */
 int initialize (const char *path)
 {
-    int verbose = SI_VERBOSE_SERIAL | SI_VERBOSE_DMA;
     struct SI_SERIAL_PARAM serial;
     int fd;
 
     if ((fd = open (device, O_RDWR)) < 0)
         die ("%s: %s\n", device, strerror (errno));
-
+#if 0
+    int verbose = SI_VERBOSE_SERIAL | SI_VERBOSE_DMA;
     if (ioctl (fd, SI_IOCTL_VERBOSE, &verbose) < 0)
         die ("ioctl SI_IOCTL_VERBOSE: %s\n", strerror (errno));
-
+#endif
     memset (&serial, 0, sizeof (serial));
     serial.baud = 57600;
     serial.parity = 0; // none

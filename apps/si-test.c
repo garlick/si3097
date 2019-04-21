@@ -72,13 +72,13 @@ char *xstrdup (const char *s);
 void usage ( void );
 void die ( const char *fmt, ... );
 
-const char *default_device = "/dev/si3097a";
+const char *default_device = "/dev/sicamera0";
 const char *default_setfile = NULL;
 const char *default_dspfile = NULL;
 const char *default_cfgfile = "Test.cfg";
 
 static char *dspfile = NULL;
-static int verbose = SI_VERBOSE_SERIAL | SI_VERBOSE_DMA;
+int verbose = 0;
 
 #define OPTIONS "f:c:s:d:"
 static const struct option longopts[] = {
@@ -144,8 +144,10 @@ int main(int argc, char *argv[] )
    */
   if((c->fd = open( device, O_RDWR, 0 ))<0 )
     die ("%s: %s\n", device, strerror (errno));
+#if 0
   if( ioctl(c->fd, SI_IOCTL_VERBOSE, &verbose) <0 )
     die ("SI_IOCTL_VERBOSE: %s\n", device, strerror (errno));
+#endif
   si_init_com( c->fd, 57600, 0, 8, 1, 9000 );
 
   /* Store readout settings to camera.

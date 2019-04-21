@@ -31,6 +31,7 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include <linux/poll.h>
 #include <linux/pci.h>
 #include <linux/delay.h>
+#include <linux/cdev.h>
 #include <asm/atomic.h>
 
 #include "si3097.h"
@@ -58,11 +59,13 @@ module_param( maxever, int,  0 );
 int timeout = 5000;  /* default jiffies */
 module_param( timeout, int,  0 );
 
-int verbose = 1;
+int verbose = 0;
 module_param( verbose, int,  0 ); 
 
 
-static struct SIDEVICE *si_devices = NULL; /* list of cards */
+#define SI_MAX_CARDS 3
+static struct SIDEVICE si_devices[SI_MAX_CARDS];
+static int si_count = 0;
 
 
 static struct pci_device_id si_pci_tbl[] __initdata = {
@@ -72,7 +75,9 @@ static struct pci_device_id si_pci_tbl[] __initdata = {
 
 static spinlock_t spin_multi_devs; /* use this for configure_device */
 static struct pci_driver si_driver;
-static int si_major = 0;
+static dev_t si_dev;
+static struct class *si_class;
+static struct cdev si_cdev;
 
 
 MODULE_DEVICE_TABLE( pci, si_pci_tbl);
@@ -85,21 +90,20 @@ int si_show_proc(struct seq_file *seq, void *private)
 {
   struct SIDEVICE *d;
   struct pci_dev *pci;
+  int nr;
 
-  d = si_devices;
-  while( d ) {
+  for (nr = 0; nr < si_count; nr++) {
+    d = &si_devices[nr];
     pci = d->pci;
     if( pci ) {
       seq_printf( seq,
-        "SI %s, major %d minor %d devfn %d irq %d isopen %d\n", 
-                   pci_name(pci), si_major, d->minor, pci->devfn, pci->irq,
+        "SI %s, major %d minor %d devfn %d irq %d isopen %d\n",
+                   pci_name(pci), MAJOR(si_dev), nr, pci->devfn, pci->irq,
                    atomic_read(&d->isopen)  );
 
     } else {
-      seq_printf( seq, "SI TEST major %d minor %d\n", si_major, d->minor);
+      seq_printf( seq, "SI TEST major %d minor %d\n", MAJOR(si_dev), nr);
     }
-
-    d = d->next;
   }
   return 0;
 }
@@ -142,15 +146,13 @@ const struct pci_device_id *id;
   struct SIDEVICE *dev;
   unsigned char irup;
   unsigned int error;
-  int wh, len, i;
+  int len, i;
   __u32 reg;
+  int nr = si_count;
 
-  printk("SI configure device\n");
-  wh = 0;
-  dev = si_devices;
-  while( dev ) {
-    dev= dev->next;
-    wh++;
+  if (nr == SI_MAX_CARDS) {
+    printk(KERN_INFO "SI ignoring card - max %d\n", SI_MAX_CARDS);
+    return(-EINVAL);
   }
 
   if(pci_set_dma_mask( pci, 0xffffffff ) != 0) {
@@ -158,34 +160,23 @@ const struct pci_device_id *id;
     return(-EIO);
   }
 
-  if(!(dev = kmalloc( sizeof(struct SIDEVICE), GFP_KERNEL))) {
-    printk( "SI si_configure_device no memory\n" );
-    return -ENOMEM;
-  }
-
-  memset(dev, 0, sizeof(struct SIDEVICE));
-  dev->verbose = 1;
-
-
 /* in case of multiple devices on a SMP machine */
 
   spin_lock( &spin_multi_devs );
 
-  if( si_devices )
-    dev->next = si_devices;
+  dev = &si_devices[nr];
+  memset(dev, 0, sizeof(struct SIDEVICE));
+  si_count++;
 
-  si_devices = dev;
   spin_unlock( &spin_multi_devs );
 
-  dev->minor = wh;
- 
   if( (error = pci_enable_device( pci )) < 0 )
-    return error;
+    goto out;
 
   dev->pci = pci;
   pci_read_config_byte(dev->pci, PCI_INTERRUPT_LINE, &irup);
   if( (error = pci_request_regions( dev->pci, "SI3097")) < 0 )
-    return error;
+    goto out;
      
   for ( i=0; i<4; i++ ) {
     len = pci_resource_len(pci,i);
@@ -211,7 +202,8 @@ const struct pci_device_id *id;
        printk( "SI %s failed to get irq %d error %d\n", pci_name(pci),
             pci->irq, error);
        printk( "SI skipping device\n");
-       return(-ENODEV);
+       error = -ENODEV;
+       goto out;
      } 
   } else
     printk( "SI device %s no pci interupt\n", pci_name(pci) );
@@ -266,7 +258,6 @@ const struct pci_device_id *id;
 
 //  reg = PLX_REG_READ( dev, PCI9054_INT_CTRL_STAT);
 
-  printk("SI device %d driver loaded, intr stat 0x%x\n", wh, reg );
 //  reg = PLX_REG_READ(dev, PCI9054_DMA0_MODE );
 //  printk("SI mode 0x%x\n", reg );
 
@@ -283,7 +274,6 @@ const struct pci_device_id *id;
     if( buflen > maxever )
       buflen = maxever;
 
-    printk( "SI initial load configuring memory to %d\n", maxever );
     dev->dma_cfg.total = maxever;
     dev->dma_cfg.buflen = buflen;
     dev->dma_cfg.timeout = timeout;
@@ -291,8 +281,13 @@ const struct pci_device_id *id;
     dev->dma_cfg.config = SI_DMA_CONFIG_WAKEUP_ONEND;
     si_config_dma( dev );
   }
+  device_create(si_class, NULL, MKDEV(MAJOR(si_dev), nr),
+                NULL, "sicamera%d", nr);
 
   return(0);
+out:
+  si_count--;
+  return(error);
 }
 
 
@@ -302,87 +297,76 @@ const struct pci_device_id *id;
 
 static int __init si_init_module(void)
 {
-  int result, cardcount, wh;
-  struct SIDEVICE *dev;
-
-
-  si_major = 0; /* let OS assign */
-
-
-
   spin_lock_init( &spin_multi_devs );
-
-  printk("SI init module\n");
 
   memset( &si_driver, 0, sizeof(struct pci_driver));
   si_driver.name = "si3097";
   si_driver.id_table = si_pci_tbl;
   si_driver.probe = si_configure_device;
 
+  if (alloc_chrdev_region(&si_dev, 0, SI_MAX_CARDS, "si3097") < 0) {
+    printk(KERN_ERR "SI alloc_chrdev_region failed");
+    return (-1);
+  }
+  if (!(si_class = class_create(THIS_MODULE, "chardrv"))) {
+    printk(KERN_ERR "SI class_create failed");
+    goto out_reg;
+  }
+  cdev_init(&si_cdev, &si_fops);
+  if (cdev_add(&si_cdev, si_dev, SI_MAX_CARDS) < 0) {
+    printk(KERN_ERR "SI cdev_add failed");
+    goto out_class;
+  }
+
+  if (!(si_proc = proc_create ("si3097", 0, NULL, &si_proc_fops))) {
+    printk(KERN_ERR "SI proc_create failed");
+    goto out_cdev;
+  }
+
 //#define NO_HW_TEST 1
 
 #ifdef NO_HW_TEST
-
-    cardcount = 1;
-    if(!(si_devices = kmalloc( sizeof(struct SIDEVICE), GFP_KERNEL))) {
-      printk( "SI si_configure_device no memory\n" );
-      return -ENOMEM;
-    }
+    si_count = 1;
+    dev = &si_devices[0];
     printk("SI TEST device configured\n");
-    memset(si_devices, 0, sizeof(struct SIDEVICE));
-    si_devices->test = 1;
-    spin_lock_init( &si_devices->uart_lock );
-    spin_lock_init( &si_devices->dma_lock );
+    memset(dev, 0, sizeof(struct SIDEVICE));
+    dev->test = 1;
+    spin_lock_init( &dev->uart_lock );
+    spin_lock_init( &dev->dma_lock );
 #else
-
-  printk("SI looking for card\n");
-  if( pci_register_driver( &si_driver ) < 0 )
-    return -EIO;
-
-  wh = 0;
-  dev = si_devices;
-  while( dev ) {
-    dev= dev->next;
-    wh++;
+  if( pci_register_driver( &si_driver ) < 0 ) {
+    printk(KERN_ERR "SI pci_register_driver failed");
+    goto out_proc;
   }
-
-  if( wh == 0 ) {
+  if( si_count == 0 ) {
     pci_unregister_driver( &si_driver );
-    cardcount = 0;
     printk("SI no cards found\n");
-    return(-ENODEV);
+    goto out_proc;
   }
-
-  cardcount = wh;
-
 #endif
-  si_major = 0;
-  if((result = register_chrdev(0, "si3097", &si_fops) )<0 ) {
-    printk(KERN_WARNING "SI: can't get major %d\n",si_major);
-    return result;
-  } else 
-    printk("SI configuring %d cards, major number %d\n", 
-      cardcount, result );
 
-  si_major = result; /* dynamic */
+  return 0; /* succeed */
 
-  if (!(si_proc = proc_create ("si3097", 0, NULL, &si_proc_fops)))
-    return -ENOMEM;
-
-  if( cardcount == 0 )
-    return -ENODEV;
-  else
-    return 0; /* succeed */
+out_proc:
+    remove_proc_entry( "si3097", 0 );
+out_cdev:
+  cdev_del(&si_cdev);
+out_class:
+  class_destroy(si_class);
+out_reg:
+  unregister_chrdev_region(si_dev, SI_MAX_CARDS);
+  return(-1);
 }
 
 static void __exit si_cleanup_module(void)
 {
-  struct SIDEVICE *dev, *old;
+  struct SIDEVICE *dev;
+  int nr;
 
-  printk( "SI cleanup\n" );
+  cdev_del(&si_cdev);
 
-  dev = si_devices;
-  while( dev ) {
+  for (nr = 0; nr < si_count; nr++) {
+    dev = &si_devices[nr];
     si_stop_dma(dev, NULL);
     si_free_sgl(dev);   
     si_cleanup_serial(dev);
@@ -393,20 +377,19 @@ static void __exit si_cleanup_module(void)
       pci_release_regions( dev->pci );
       pci_disable_device( dev->pci );
     }
-    old = dev;
-    dev = dev->next;
-    kfree(old);
+    device_destroy(si_class, MKDEV(MAJOR(si_dev), nr));
   }
+
+  class_destroy(si_class);
+  unregister_chrdev_region(si_dev, SI_MAX_CARDS);
 
 #ifndef NO_HW_TEST
   pci_unregister_driver( &si_driver );
 #endif
-  unregister_chrdev(si_major, "si3097");
 
   if( si_proc )
     remove_proc_entry( "si3097", 0 );
   si_proc = NULL;
-  si_devices = NULL;
 }
 
 module_init(si_init_module);
@@ -420,17 +403,11 @@ int si_open (struct inode *inode, struct file *filp)
   struct SIDEVICE *dev; /* device information */
   __u32 int_stat;
 
-  dev = si_devices;
-  while( dev ) {
-    if( minor == dev->minor )
-      break;
-    dev = dev->next;
-  }
-
-  if( !dev ) {
+  if( minor >= si_count) {
     printk("SI bad minor number %d in open\n", minor );
     return(-EBADF);
   }
+  dev = &si_devices[minor];
 
   try_module_get(THIS_MODULE);
 
@@ -443,9 +420,6 @@ int si_open (struct inode *inode, struct file *filp)
 
   int_stat = PLX_REG_READ( dev, PCI9054_INT_CTRL_STAT );
 
-  printk( "SI open verbose %d isopen %d minor %d int_stat 0x%x\n", 
-    dev->verbose, atomic_read(&dev->isopen), minor, int_stat );
-
   return 0;          /* success */
 }
 
@@ -454,17 +428,11 @@ int si_close(struct inode *inode, struct file *filp) /* close */
   int minor = MINOR(inode->i_rdev);
   struct SIDEVICE *dev;
 
-  dev = si_devices;
-  while( dev ) {
-    if( minor == dev->minor )
-      break;
-    dev = dev->next;
-  }
-
-  if( !dev ) {
+  if( minor >= si_count ) {
     printk("SI bad minor number %d in close\n", minor );
     return(-EBADF);
   }
+  dev = &si_devices[minor];
 
   atomic_dec(&dev->isopen);
 
@@ -481,7 +449,6 @@ int si_close(struct inode *inode, struct file *filp) /* close */
   }
 
   filp->private_data = NULL;
-  printk( "SI close %d\n", atomic_read(&dev->isopen) );
   module_put(THIS_MODULE);
     
   return 0;

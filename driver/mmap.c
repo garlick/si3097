@@ -72,8 +72,14 @@ void si_vmaclose( struct vm_area_struct *area )
 /* when the application faults this routine is called to map the data */
 
 
+#if LINUX_VERSION_CODE < KERNEL_VERSION(4, 11, 0)
 int si_vmafault( struct vm_area_struct *vma, struct vm_fault *vmf )
 {
+#else
+int si_vmafault( struct vm_fault *vmf )
+{
+  struct vm_area_struct *vma = vmf->vma;
+#endif
   unsigned int loff, off;
   int nbuf;
   void *vaddr;
@@ -170,8 +176,9 @@ struct SIDEVICE *dev;
   if( cmd_stat & 1 )
     si_stop_dma(dev, NULL );
 
-  printk("si_config_dma alloc_maxever %d alloc_buflen %d\n", 
-    dev->alloc_maxever, dev->alloc_buflen );
+  if (dev->verbose)
+    printk("si_config_dma alloc_maxever %d alloc_buflen %d\n",
+      dev->alloc_maxever, dev->alloc_buflen );
 
   if( dev->alloc_maxever == 0 ) { /* allocate the memory */
     if( dev->dma_cfg.total <= 0 ) {
@@ -188,8 +195,9 @@ struct SIDEVICE *dev;
   } else {
     isalloc = 0;
   }
-  printk("si_config_dma2 alloc_maxever %d alloc_buflen %d\n", 
-    dev->alloc_maxever, dev->alloc_buflen );
+  if (dev->verbose)
+    printk("si_config_dma2 alloc_maxever %d alloc_buflen %d\n",
+      dev->alloc_maxever, dev->alloc_buflen );
 
   if( dev->dma_cfg.maxever > dev->alloc_maxever ) {
     printk("SI config need to freemem, maxever: asked for %d have %d\n",
@@ -276,13 +284,13 @@ struct SIDEVICE *dev;
   spin_unlock_irqrestore( &dev->dma_lock, flags );
 
 
-  if( dev->verbose )
+  if( dev->verbose ) {
     printk("SI si_config_dma sgl 0x%x sgl_pci 0x%x buflen %d sm_buflen %d nbuf %d\n", 
      (unsigned int)dev->sgl, (unsigned int)dev->sgl_pci, 
      buflen, sm_buflen, nbuf  );
-
-  if( isalloc )
-    si_print_memtable( dev );
+    if( isalloc )
+      si_print_memtable( dev );
+  }
 
   return 0;
 }
