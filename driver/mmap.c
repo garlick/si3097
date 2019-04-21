@@ -331,7 +331,8 @@ struct SIDEVICE *dev;
   local_addr = SI_LOCAL_BUSADDR;
 
   dev->sgl_len = nbuf * sizeof(struct SIDMA_SGL);
-  dev->sgl = pci_alloc_consistent( dev->pci, dev->sgl_len, &dev->sgl_pci); 
+  dev->sgl = dma_alloc_coherent(&dev->pci->dev, dev->sgl_len, &dev->sgl_pci,
+                                GFP_KERNEL);
 //  dev->sgl = jeff_alloc( dev->sgl_len, &dev->sgl_pci); 
 
 //  spin_lock_irqsave( &dev->dma_lock, flags );
@@ -348,7 +349,7 @@ struct SIDEVICE *dev;
 
   for( nb=nbuf-1; nb>=0; nb-- ) {
 
-    cpu = pci_alloc_consistent( dev->pci, sm_buflen, &dma_buf ); 
+    cpu = dma_alloc_coherent(&dev->pci->dev, sm_buflen, &dma_buf, GFP_KERNEL);
     //cpu = jeff_alloc( sm_buflen, &dma_buf ); 
     if( !cpu ) {
       printk( "SI no memory allocating buffer %d\n", nbuf - nb); 
@@ -458,12 +459,11 @@ struct SIDEVICE *dev;
       page++;
     }
 
-    pci_free_consistent( dev->pci, sm_buflen, 
-      (void *)ch->cpu, ch->padr );
+    dma_free_coherent(&dev->pci->dev, sm_buflen, (void *)ch->cpu, ch->padr);
     total_frees++;
     total_bytes += dev->dma_cfg.buflen;
   }
-  pci_free_consistent( dev->pci, dev->sgl_len, dchain, dev->sgl_pci );
+  dma_free_coherent(&dev->pci->dev, dev->sgl_len, dchain, dev->sgl_pci);
   total_frees++;
   total_bytes += dev->sgl_len;
   dev->dma_cfg.buflen = 0;
