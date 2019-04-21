@@ -24,7 +24,7 @@ struct SI_DMA_CONFIG {
 
 /* status word of SI_DMA_CONFIG */
 
-#define SI_DMA_CONFIG_WAKEUP_ONEND  0x01 
+#define SI_DMA_CONFIG_WAKEUP_ONEND  0x01
 #define SI_DMA_CONFIG_WAKEUP_EACH   0x02
 
 /* mask passed to verbose */
@@ -44,7 +44,7 @@ struct SI_DMA_STATUS {
 #define SI_DMA_STATUS_DONE     0x10
 #define SI_DMA_STATUS_ENABLE   0x01
 
-// UART configuration 
+// UART configuration
 
 struct SI_SERIAL_PARAM {
   int flags;
@@ -57,10 +57,10 @@ struct SI_SERIAL_PARAM {
   int timeout;
 };
 
-/* flags field for configuring the uart */ 
+/* flags field for configuring the uart */
 #define SI_SERIAL_FLAGS_BLOCK        0x04 /* read/write block for done */
 
-/* for SI_IOCTL_SETPOLL make poll (or select) wait on dma or the uart 
+/* for SI_IOCTL_SETPOLL make poll (or select) wait on dma or the uart
    but not both */
 
 #define SI_SETPOLL_DMA   0
@@ -101,7 +101,7 @@ typedef enum _SI_DRIVER_MSGS
 #define SI_IOCTL_SERIAL_BREAK      _IOW(SI_MAGIC, MSG_SI_SERIAL_BREAK, int)
 #define SI_IOCTL_SERIAL_CLEAR      _IO(SI_MAGIC, MSG_SI_SERIAL_CLEAR )
 #define SI_IOCTL_SERIAL_OUT_STATUS _IOR(SI_MAGIC, MSG_SI_SERIAL_OUT_STATUS, int)
-  
+
 #define SI_IOCTL_DMA_INIT          _IOR(SI_MAGIC, MSG_SI_DMA_INIT, struct SI_DMA_CONFIG )
 #define SI_IOCTL_DMA_START         _IOR(SI_MAGIC, MSG_SI_DMA_START, struct SI_DMA_STATUS )
 

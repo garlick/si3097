@@ -1,6 +1,6 @@
-/* 
+/*
 
-Linux 2.6 Driver for the 
+Linux 2.6 Driver for the
 Spectral Instruments 3097 Camera Interface
 
 Copyright (C) 2006  Jeffrey R Hagen
@@ -46,12 +46,12 @@ MODULE_LICENSE("GPL");
 /* module parameters */
 
 /*
- if maxever is not zero on module load, 
+ if maxever is not zero on module load,
  configure memory based on buflen and maxever
 */
 
 int buflen = 1048576;
-module_param( buflen, int,  0 ); 
+module_param( buflen, int,  0 );
 
 int maxever = 33554432; /* this is for lotis */
 module_param( maxever, int,  0 );
@@ -60,7 +60,7 @@ int timeout = 5000;  /* default jiffies */
 module_param( timeout, int,  0 );
 
 int verbose = 0;
-module_param( verbose, int,  0 ); 
+module_param( verbose, int,  0 );
 
 
 #define SI_MAX_CARDS 3
@@ -174,7 +174,7 @@ static int si_configure_device(struct pci_dev *pci,
   pci_read_config_byte(dev->pci, PCI_INTERRUPT_LINE, &irup);
   if( (error = pci_request_regions( dev->pci, "SI3097")) < 0 )
     goto out;
-     
+
   for ( i=0; i<4; i++ ) {
     len = pci_resource_len(pci,i);
 
@@ -189,14 +189,14 @@ static int si_configure_device(struct pci_dev *pci,
   }
 
   if( pci->irq ) {
-    if((error = request_irq( 
+    if((error = request_irq(
        pci->irq, (void *)si_interrupt, IRQF_SHARED, "SI", dev))){
        printk( "SI %s failed to get irq %d error %d\n", pci_name(pci),
             pci->irq, error);
        printk( "SI skipping device\n");
        error = -ENODEV;
        goto out;
-     } 
+     }
   } else
     printk( "SI device %s no pci interupt\n", pci_name(pci) );
 
@@ -218,10 +218,10 @@ static int si_configure_device(struct pci_dev *pci,
   init_waitqueue_head( &dev->mmap_block );
 
   /* do the master reset local bus */
-//  LOCAL_REG_WRITE(dev, LOCAL_COMMAND, 0 );  
+//  LOCAL_REG_WRITE(dev, LOCAL_COMMAND, 0 );
 //  UART_REG_WRITE(dev, SERIAL_IER, 0);   /* disable all serial ints */
 //  mdelay(1);
-//  LOCAL_REG_WRITE(dev, LOCAL_COMMAND, (LC_FIFO_MRS_L) );  
+//  LOCAL_REG_WRITE(dev, LOCAL_COMMAND, (LC_FIFO_MRS_L) );
 
 //  reg = PLX_REG8_READ(dev, PCI9054_DMA_COMMAND_STAT);
 //  printk("SI dma cmd stat 0x%x \n", reg );
@@ -235,7 +235,7 @@ static int si_configure_device(struct pci_dev *pci,
   PLX_REG_WRITE( dev, PCI9054_INT_CTRL_STAT, reg | (1 << 8) | (1<<11));
   reg = PLX_REG_READ( dev, PCI9054_INT_CTRL_STAT);
 
-//  printk("SI LOCAL_ID_NUMBER = 0x%x 0x%x\n", 
+//  printk("SI LOCAL_ID_NUMBER = 0x%x 0x%x\n",
 //    LOCAL_REG_READ(dev, LOCAL_ID_NUMBER), reg );
 
 //  reg = PLX_REG_READ( dev, PCI9054_INT_CTRL_STAT);
@@ -245,7 +245,7 @@ static int si_configure_device(struct pci_dev *pci,
 //    PLX_REG_WRITE( dev, PCI9054_INT_CTRL_STAT, reg | (1<<7) );
 //  }
 //  reg = PLX_REG_READ( dev, PCI9054_INT_CTRL_STAT );
-//  printk("SI LOCAL_REV_NUMBER = 0x%x 0x%x\n", 
+//  printk("SI LOCAL_REV_NUMBER = 0x%x 0x%x\n",
 //    LOCAL_REG_READ(dev, LOCAL_REV_NUMBER), reg );
 
 //  reg = PLX_REG_READ( dev, PCI9054_INT_CTRL_STAT);
@@ -360,7 +360,7 @@ static void __exit si_cleanup_module(void)
   for (nr = 0; nr < si_count; nr++) {
     dev = &si_devices[nr];
     si_stop_dma(dev, NULL);
-    si_free_sgl(dev);   
+    si_free_sgl(dev);
     si_cleanup_serial(dev);
     if( dev->pci ) {
       if( dev->pci->irq )
@@ -406,7 +406,7 @@ int si_open (struct inode *inode, struct file *filp)
   if( (op = atomic_read(&dev->isopen)) ) {
     printk("SI minor %d already open %d, thats ok\n", op, minor );
   }
-  
+
   filp->private_data = dev;
   atomic_inc(&dev->isopen);
 
@@ -434,7 +434,7 @@ int si_close(struct inode *inode, struct file *filp) /* close */
 //    }
     si_stop_dma(dev, NULL );
   }
-  
+
   if( atomic_read(&dev->isopen) <= 0 && atomic_read(&dev->vmact) != 0 ) {
     printk("SI close without vma_close, %d\n", atomic_read(&dev->vmact));
     atomic_set(&dev->vmact, 0);
@@ -442,7 +442,7 @@ int si_close(struct inode *inode, struct file *filp) /* close */
 
   filp->private_data = NULL;
   module_put(THIS_MODULE);
-    
+
   return 0;
 }
 
@@ -467,7 +467,7 @@ ssize_t si_read(struct file *filp, char __user *buf, size_t count, loff_t *off)
   }
 
   for (i=0; i < count; i++) {     // for all characters
-    
+
     while( si_receive_serial( dev, &ch ) == FALSE ) {
       if( !blocking ) {
         if( dev->verbose & SI_VERBOSE_SERIAL)
@@ -506,7 +506,7 @@ ssize_t si_write(struct file *filp, const char __user *buf,
   int i, ret, blocking;
   struct SIDEVICE *dev;
   __u8 ch;
- 
+
   dev = filp->private_data;
   blocking = (dev->Uart.block & SI_SERIAL_FLAGS_BLOCK)!=0;
 
@@ -524,10 +524,10 @@ ssize_t si_write(struct file *filp, const char __user *buf,
   for (i=0; i < count; i++) {     // for all characters
     if( get_user( ch, (char __user *)&buf[i] ) )
       return -EFAULT;
-    
+
     if( si_transmit_serial( dev, ch ) == FALSE ) {
       if( blocking ) {
- 
+
         ret = dev->Uart.timeout;
         wait_event_interruptible_timeout( dev->uart_wblock,
           si_uart_tx_empty( dev ), ret );

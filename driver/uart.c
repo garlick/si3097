@@ -1,6 +1,6 @@
-/* 
+/*
 
-Linux 2.6 Driver for the 
+Linux 2.6 Driver for the
 Spectral Instruments 3097 Camera Interface
 
 Copyright (C) 2006  Jeffrey R Hagen
@@ -62,9 +62,9 @@ void si_uart_clear(struct SIDEVICE *dev)
 
 /* warn if clearing data */
   if( clr > 0 )
-    printk("SI UART clear rxcnt %d\n", clr ); 
+    printk("SI UART clear rxcnt %d\n", clr );
   else if( dev->verbose & SI_VERBOSE_SERIAL) {
-    printk("SI UART clear\n" ); 
+    printk("SI UART clear\n" );
   }
 }
 
@@ -103,7 +103,7 @@ int si_set_serial_params(struct SIDEVICE *dev, struct SI_SERIAL_PARAM *sp)
   UART_REG_WRITE(dev, SERIAL_LCR, c);
 
     // make sure the loop register is NOT set
-  UART_REG_WRITE(dev, SERIAL_MCR, 0);  
+  UART_REG_WRITE(dev, SERIAL_MCR, 0);
 
   dev->Uart.bits = sp->bits;
   x = (sp->bits - 1) & 3;
@@ -129,7 +129,7 @@ int si_set_serial_params(struct SIDEVICE *dev, struct SI_SERIAL_PARAM *sp)
   x = (sp->stopbits == 2)?4:0;
   c = UART_REG_READ(dev, SERIAL_LCR) & ~4;
   UART_REG_WRITE(dev, SERIAL_LCR, (__u8)(c | x));
-  
+
   switch (sp->fifotrigger) {
     case 1:
     case 4:
@@ -148,12 +148,12 @@ int si_set_serial_params(struct SIDEVICE *dev, struct SI_SERIAL_PARAM *sp)
 
   reg = UART_REG_READ(dev, SERIAL_FCR);
   if( dev->verbose & SI_VERBOSE_SERIAL)
-    printk("UART SERIAL_FCR 0x%x\n", reg ); 
+    printk("UART SERIAL_FCR 0x%x\n", reg );
 
   UART_REG_WRITE(dev, SERIAL_IER, 0);   /* disable all serial ints */
   cp = dev->Uart.rxbuf;  /* save old pointer just in case */
 
-  /* allocate one large buffer and split it in half. 
+  /* allocate one large buffer and split it in half.
      Allocatate new before deallocating old one.
    */
 
@@ -193,7 +193,7 @@ int si_set_serial_params(struct SIDEVICE *dev, struct SI_SERIAL_PARAM *sp)
   UART_REG_READ(dev, SERIAL_RX);
   reg = UART_REG_READ(dev, SERIAL_LSR);
   if( dev->verbose & SI_VERBOSE_SERIAL)
-    printk("UART SERIAL_LSR 0x%x\n", reg ); 
+    printk("UART SERIAL_LSR 0x%x\n", reg );
   UART_REG_READ(dev, SERIAL_MSR);
   UART_REG_WRITE(dev, SERIAL_IER, RX_INT|TX_INT);   /* tx ints enabled */
 
@@ -201,17 +201,17 @@ int si_set_serial_params(struct SIDEVICE *dev, struct SI_SERIAL_PARAM *sp)
 
   if( dev->verbose & SI_VERBOSE_SERIAL) {
     reg = UART_REG_READ(dev, SERIAL_IER);
-    printk("UART SERIAL_IER 0x%x\n", reg ); 
+    printk("UART SERIAL_IER 0x%x\n", reg );
   }
 
   if( dev->verbose & SI_VERBOSE_SERIAL) {
     reg = UART_REG_READ(dev, SERIAL_LCR);
-    printk("UART SERIAL_LCR 0x%x\n", reg ); 
+    printk("UART SERIAL_LCR 0x%x\n", reg );
   }
 
   if( dev->verbose & SI_VERBOSE_SERIAL) {
     reg = UART_REG_READ(dev, SERIAL_FCR);
-    printk("UART SERIAL_FCR 0x%x\n", reg ); 
+    printk("UART SERIAL_FCR 0x%x\n", reg );
   }
 
   si_uart_clear( dev );
@@ -233,8 +233,8 @@ int si_init_uart(struct SIDEVICE *dev)
   param.stopbits = 1;
   param.fifotrigger = 8;
   param.buffersize = PAGE_SIZE*2; /* 16384 */
-  
-  si_set_serial_params(dev, &param ); 
+
+  si_set_serial_params(dev, &param );
 
   if( dev->verbose & SI_VERBOSE_SERIAL)
     printk("exit initUART\n");
@@ -270,7 +270,7 @@ void si_cleanup_serial(struct SIDEVICE *dev)
     PLX_REG_WRITE( dev, PCI9054_INT_CTRL_STAT, reg & ~((1<<11)));
 }
 
-/* send one character over the serial bus 
+/* send one character over the serial bus
    if ready to send, send it, if not, queue
    and let the isr handle it
  */
@@ -308,13 +308,13 @@ int si_transmit_serial(struct SIDEVICE *dev, __u8 data)
   spin_unlock_irqrestore( &dev->uart_lock, flags );
 
 //  if( dev->verbose )
-//    printk( "SI transmit_serial 0x%x txcnt %d size %d reg 0x%x ret %d\n", 
+//    printk( "SI transmit_serial 0x%x txcnt %d size %d reg 0x%x ret %d\n",
 //     data, dev->Uart.txcnt, dev->Uart.serialbufsize, reg, ret );
 
   return ret;
 }
 
-/* read one character from UART 
+/* read one character from UART
 
    Remove 1 character from the receive queue, copy
    it into pdata, and return TRUE. If the queue
@@ -334,7 +334,7 @@ int si_receive_serial(struct SIDEVICE *dev, __u8 *pdata)
 
   spin_lock_irqsave( &dev->uart_lock, flags );
   reg = UART_REG_READ(dev, SERIAL_LSR);
- 
+
 
   if (dev->Uart.rxput != dev->Uart.rxget)
   {
@@ -348,7 +348,7 @@ int si_receive_serial(struct SIDEVICE *dev, __u8 *pdata)
     *pdata = 0;
     ret = FALSE;
   }
- 
+
   spin_unlock_irqrestore( &dev->uart_lock, flags );
 
   if( dev->verbose & SI_VERBOSE_SERIAL) {
@@ -396,13 +396,13 @@ int si_uart_break(struct SIDEVICE *dev, int break_time)
   spin_lock_irqsave( &dev->uart_lock, flags );
   uc = UART_REG_READ(dev, SERIAL_LCR);  // assert break (signal low)
   UART_REG_WRITE(dev, SERIAL_LCR, (__u8)(uc | 0x40));
-  
+
   mdelay(break_time);            // wait break time
-    
+
   uc = UART_REG_READ(dev, SERIAL_LCR);  // de-assert break (signal high)
   UART_REG_WRITE(dev, SERIAL_LCR, (__u8)(uc & ~0x40));
   spin_unlock_irqrestore( &dev->uart_lock, flags );
-  
+
   return(0);
 }
 
