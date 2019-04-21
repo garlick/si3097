@@ -33,7 +33,7 @@ struct SIDEVICE {
   spinlock_t dma_lock;     /* protection for dma registers  */
   spinlock_t nopage_lock;  /* protection for nopage/mmap  */
   atomic_t isopen;         /* true when device is open      */
-  __u32 bar[4];  /*  PCI bus address mappings */ 
+  void __iomem *bar[4];    /*  PCI bus address mappings */
   unsigned int bar_len[4]; /* length of PCI bus address mappings */
   atomic_t vmact;          /* number of vma opens */
 
@@ -77,26 +77,27 @@ struct SIDEVICE {
 
 
 // Macros for PLX chip register access
-#define PLX_REG_READ(pdx, offset)\
-  readl((__u32 *)((__u32)((pdx)->bar[0]) + (offset)))
+#define PLX_REG_READ(pdx, offset) \
+  ioread32((pdx)->bar[0] + (offset))
 #define PLX_REG_WRITE(pdx, offset, value) \
-  writel((value), (__u32 *)((__u32)((pdx)->bar[0]) + (offset)))
+  iowrite32((value), (pdx)->bar[0] + (offset))
 
-#define PLX_REG8_READ(pdx, offset)\
-  readb((__u32 *)((__u32)((pdx)->bar[0]) + (offset)))
+#define PLX_REG8_READ(pdx, offset) \
+  ioread8((pdx)->bar[0] + (offset))
 #define PLX_REG8_WRITE(pdx, offset, value) \
-  writeb((value), (__u32 *)((__u32)((pdx)->bar[0]) + (offset)))
+  iowrite8((value), (pdx)->bar[0] + (offset))
 
 // Macros for SI UART access
-#define UART_REG_READ(pdx, offset) inb(((__u32)((pdx)->bar[2])) + (offset))
-#define UART_REG_WRITE(pdx, offset, value)\
-  outb((value), ((__u32)((pdx)->bar[2])) + (offset))
+#define UART_REG_READ(pdx, offset) \
+  ioread8((pdx)->bar[2] + (offset))
+#define UART_REG_WRITE(pdx, offset, value) \
+  iowrite8((value), (pdx)->bar[2] + (offset))
 
 // Macros for SI LOCAL access
 #define LOCAL_REG_READ(pdx, offset) \
-  (inl(((__u32)((pdx)->bar[3])) + (offset*4)) & 0xff)
+  (ioread32((pdx)->bar[3] + (offset*4)) & 0xff)
 #define LOCAL_REG_WRITE(pdx, offset, value)\
-  outl((value & 0xff), ((__u32)((pdx)->bar[3])) + (offset*4))
+  iowrite32((value & 0xff), (pdx)->bar[3] + (offset*4))
 
 
 /*

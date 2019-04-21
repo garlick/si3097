@@ -185,15 +185,10 @@ const struct pci_device_id *id;
       continue;
 
     dev->bar_len[i] = len;
-    if( IORESOURCE_IO & pci_resource_flags( pci, i ) ) { /* ports */
-      dev->bar[i] = pci_resource_start( pci, i );
-    } else {
-      dev->bar[i] = (__u32) ioremap_nocache(
-        pci_resource_start(pci,i), len );
-    }
+    dev->bar[i] = pci_iomap(pci, i, len);
 
     if( dev->verbose)
-      printk("SI address of bar %d: 0x%x\n", i, (unsigned int)dev->bar[i] );
+      printk("SI address of bar %d: 0x%lx\n", i, (unsigned long)dev->bar[i] );
   }
 
   if( pci->irq ) {
