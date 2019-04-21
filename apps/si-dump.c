@@ -36,7 +36,7 @@
 
 #include "si3097.h"
 
-const char *device = "/dev/si3097a";
+const char *device = "/dev/sicamera0";
 
 void die (const char *fmt, ...)
 {

@@ -72,7 +72,7 @@ char *xstrdup (const char *s);
 void usage ( void );
 void die ( const char *fmt, ... );
 
-const char *default_device = "/dev/si3097a";
+const char *default_device = "/dev/sicamera0";
 const char *default_setfile = NULL;
 const char *default_dspfile = NULL;
 const char *default_cfgfile = "Test.cfg";
