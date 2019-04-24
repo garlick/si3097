@@ -207,7 +207,7 @@ long si_ioctl( struct file *filp, unsigned int cmd, unsigned long  args )
       break;
 
     case SI_IOCTL_FREEMEM:
-      if( dev->verbose ) {
+      if( dev->verbose )
         printk("SI freemem\n");
 
       if( (ret = si_wait_vmaclose( dev )) ) { /* make sure munmap before free */
@@ -221,7 +221,6 @@ long si_ioctl( struct file *filp, unsigned int cmd, unsigned long  args )
       } else {
         if( dev->verbose )
           printk("SI freemem no data allocated\n");
-        }
       }
       break;
 
