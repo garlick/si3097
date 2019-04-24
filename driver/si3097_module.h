@@ -1,6 +1,6 @@
 
 /* This file holds the defines and internal structures
-   for the linux 2.6 driver for the
+   for the linux driver for the
    Spectral Instruments 3097 Interface card
 */
 
@@ -33,7 +33,7 @@ struct SIDEVICE {
   spinlock_t dma_lock;     /* protection for dma registers  */
   spinlock_t nopage_lock;  /* protection for nopage/mmap  */
   atomic_t isopen;         /* true when device is open      */
-  __u32 bar[4];  /*  PCI bus address mappings */ 
+  void __iomem *bar[4];    /*  PCI bus address mappings */
   unsigned int bar_len[4]; /* length of PCI bus address mappings */
   atomic_t vmact;          /* number of vma opens */
 
@@ -65,47 +65,48 @@ struct SIDEVICE {
   __u32 rb_count;          /* local bus count at dma_done (must be zero) */
   int setpoll;             /* conditional for the function of select (poll)*/
   int alloc_maxever;       /* these must match dma_cfg */
-  int alloc_buflen;         
-  int alloc_nbuf;         
+  int alloc_buflen;
+  int alloc_nbuf;
   int alloc_sm_buflen;     /* dma_buflen padded out to PAGE_SIZE */
 };
 
 #define VMACLOSE_TIMEOUT (10*HZ)   /* seconds */
 
 // local address of the fifo read (no increment)
-#define SI_LOCAL_BUSADDR 0x30000004 
+#define SI_LOCAL_BUSADDR 0x30000004
 
 
 // Macros for PLX chip register access
-#define PLX_REG_READ(pdx, offset)\
-  readl((__u32 *)((__u32)((pdx)->bar[0]) + (offset)))
+#define PLX_REG_READ(pdx, offset) \
+  ioread32((pdx)->bar[0] + (offset))
 #define PLX_REG_WRITE(pdx, offset, value) \
-  writel((value), (__u32 *)((__u32)((pdx)->bar[0]) + (offset)))
+  iowrite32((value), (pdx)->bar[0] + (offset))
 
-#define PLX_REG8_READ(pdx, offset)\
-  readb((__u32 *)((__u32)((pdx)->bar[0]) + (offset)))
+#define PLX_REG8_READ(pdx, offset) \
+  ioread8((pdx)->bar[0] + (offset))
 #define PLX_REG8_WRITE(pdx, offset, value) \
-  writeb((value), (__u32 *)((__u32)((pdx)->bar[0]) + (offset)))
+  iowrite8((value), (pdx)->bar[0] + (offset))
 
 // Macros for SI UART access
-#define UART_REG_READ(pdx, offset) inb(((__u32)((pdx)->bar[2])) + (offset))
-#define UART_REG_WRITE(pdx, offset, value)\
-  outb((value), ((__u32)((pdx)->bar[2])) + (offset))
+#define UART_REG_READ(pdx, offset) \
+  ioread8((pdx)->bar[2] + (offset))
+#define UART_REG_WRITE(pdx, offset, value) \
+  iowrite8((value), (pdx)->bar[2] + (offset))
 
 // Macros for SI LOCAL access
 #define LOCAL_REG_READ(pdx, offset) \
-  (inl(((__u32)((pdx)->bar[3])) + (offset*4)) & 0xff)
+  (ioread32((pdx)->bar[3] + (offset*4)) & 0xff)
 #define LOCAL_REG_WRITE(pdx, offset, value)\
-  outl((value & 0xff), ((__u32)((pdx)->bar[3])) + (offset*4))
+  iowrite32((value & 0xff), (pdx)->bar[3] + (offset*4))
 
 
 /*
    This INTER_TYPE_* mask is used for the "source" word that
-   is passed to the bottom half of the interrupt service 
+   is passed to the bottom half of the interrupt service
    routine to tell what kind of interrupt occured
 */
 
-#define INTR_TYPE_NONE                  0 
+#define INTR_TYPE_NONE                  0
 #define INTR_TYPE_LOCAL_1               (1 << 0)
 #define INTR_TYPE_LOCAL_2               (1 << 1)
 #define INTR_TYPE_PCI_ABORT             (1 << 2)
@@ -117,7 +118,7 @@ struct SIDEVICE {
 #define INTR_TYPE_DMA_3                 (1 << 8)
 #define INTR_TYPE_SOFTWARE              (1 << 9)
 
-/* 
+/*
   these macros define the lower four bits
   of the SIDMA_SGL dpr register
 */
@@ -127,9 +128,9 @@ struct SIDEVICE {
 #define SIDMA_DPR_IRUP     0x04  /* true if irup desired after this block */
 #define SIDMA_DPR_TOPCI    0x08  /* true if direction is toward PCI bus */
 
-/* 
+/*
   This is the DMA Scatter Gather list
-  An array of these is allocated and populated 
+  An array of these is allocated and populated
   for each buffer requested by the DMA_INIT ioctl.
 
   fill is needed because the dpr register masks the
@@ -141,10 +142,8 @@ struct SIDMA_SGL {
   __u32 ladr;   /* DMA channel local address */
   __u32 siz;    /* transfer size (bytes) */
   __u32 dpr;    /* descriptor pointer */
-  __u32 cpu;    /* kernel virual address of padr */
-  __u32 fill;   /* pad out to 16-byte clean */
-  __u32 fill2;   /* pad out to 16-byte clean */
-  __u32 fill3;   /* pad out to 16-byte clean */
+  void *cpu;    /* kernel virual address of padr */
+  __u8 fill[16 - sizeof (void *)];   /* pad out to 16-byte clean */
 };
 
 
@@ -250,14 +249,14 @@ struct SIDMA_SGL {
 
 /*
   These registers are defined by SI and control
-  the DMA fifo.  They are mapped to BAR2 and are acessed 
+  the DMA fifo.  They are mapped to BAR2 and are acessed
   with the LOCAL_REG_[READ|WRITE] macros.
 */
 
 // defines for FIFOBaseRegisterAddress registers
 #define LOCAL_COMMAND        0 // local command register  (R/W)
 #define LOCAL_FIFO_SETUP     1 // access to FIFO setup register
-#define LOCAL_STATUS         2 // local status register    
+#define LOCAL_STATUS         2 // local status register
 #define LOCAL_UART           3 // local UART register
 
 #define LOCAL_ID_NUMBER      7 // ID number (104 for PC104 interface, 97 for PCI board PN 3097)
@@ -288,7 +287,7 @@ struct SIDMA_SGL {
 
 
 /*
-  These macros refer to registers mapped to 
+  These macros refer to registers mapped to
   BAR3 which control the 16550 UART serial port
   to the camera.
 */
@@ -308,8 +307,8 @@ struct SIDMA_SGL {
 #define SERIAL_MSR  6
 #define SERIAL_RAM  7
 
-#define TRUE  1 
-#define FALSE 0 
+#define TRUE  1
+#define FALSE 0
 
 
 // Function prototypes

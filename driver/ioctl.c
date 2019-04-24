@@ -1,6 +1,6 @@
-/* 
+/*
 
-Linux 2.6 Driver for the 
+Linux Driver for the
 Spectral Instruments 3097 Camera Interface
 
 Copyright (C) 2006  Jeffrey R Hagen
@@ -50,7 +50,7 @@ long si_ioctl( struct file *filp, unsigned int cmd, unsigned long  args )
   if( !dev )
     return -EIO;
 
-  
+
 //  if( dev->verbose )
 //    printk("SI ioctl %d\n",  _IOC_SIZE(cmd) );
 
@@ -61,7 +61,7 @@ long si_ioctl( struct file *filp, unsigned int cmd, unsigned long  args )
     case SI_IOCTL_RESET:
       ret = si_reset( dev ); /* parameter ignored */
       break;
-      
+
     case SI_IOCTL_SERIAL_IN_STATUS:
       {
       int status;
@@ -97,7 +97,7 @@ long si_ioctl( struct file *filp, unsigned int cmd, unsigned long  args )
       break;
     case SI_IOCTL_SET_SERIAL:
 
-      if(copy_from_user( &serial_param, (struct SI_SERIAL_PARAM *)args, 
+      if(copy_from_user( &serial_param, (struct SI_SERIAL_PARAM *)args,
         sizeof(struct SI_SERIAL_PARAM)))
           return (-EFAULT);
 
@@ -112,7 +112,7 @@ long si_ioctl( struct file *filp, unsigned int cmd, unsigned long  args )
       si_uart_clear( dev );
       ret = 0;
       break;
-    
+
     case SI_IOCTL_SERIAL_BREAK:
       {
         int tim;
@@ -120,7 +120,7 @@ long si_ioctl( struct file *filp, unsigned int cmd, unsigned long  args )
         if( (ret = get_user( tim, (int __user *)args ))<0 )
           break;
 
-        if (tim < 0 || tim > 1000) 
+        if (tim < 0 || tim > 1000)
           tim = 1000;        // limit to 1 second
 
         if( dev->verbose& SI_VERBOSE_SERIAL )
@@ -130,13 +130,13 @@ long si_ioctl( struct file *filp, unsigned int cmd, unsigned long  args )
       }
       break;
 
-      
+
     // DMA related entries
     case SI_IOCTL_DMA_INIT:
       if( dev->verbose )
         printk("SI IOCTL_DMA_INIT\n");
 
-      if(copy_from_user( &dev->dma_cfg, (struct SI_DMA_CONFIG *)args, 
+      if(copy_from_user( &dev->dma_cfg, (struct SI_DMA_CONFIG *)args,
         sizeof(struct SI_DMA_CONFIG))) {
           ret = -EFAULT;
           break;
@@ -144,7 +144,7 @@ long si_ioctl( struct file *filp, unsigned int cmd, unsigned long  args )
       ret = si_config_dma( dev );
 
       break;
-    
+
     case SI_IOCTL_DMA_START:
       if( dev->verbose )
         printk("SI_IOCTL_DMA_START\n");
@@ -180,7 +180,7 @@ long si_ioctl( struct file *filp, unsigned int cmd, unsigned long  args )
         sizeof(struct SI_DMA_STATUS)))
           ret = -EFAULT;
       break;
-      
+
     case SI_IOCTL_DMA_ABORT:
       if( dev->verbose )
         printk("SI_IOCTL_DMA_ABORT\n");
@@ -213,7 +213,7 @@ long si_ioctl( struct file *filp, unsigned int cmd, unsigned long  args )
       if( (ret = si_wait_vmaclose( dev )) ) { /* make sure munmap before free */
         printk("SI freemem timeout waiting for munmap\n");
         return ret;
-      } 
+      }
 
       if( dev->sgl ) {
         si_stop_dma(dev, NULL);
@@ -238,13 +238,12 @@ long si_ioctl( struct file *filp, unsigned int cmd, unsigned long  args )
 }
 
 
-int si_reset( dev )
-struct SIDEVICE *dev;
+int si_reset(struct SIDEVICE *dev)
 {
   if( dev->verbose )
     printk("SI master local reset\n" );
   /* do the master reset local bus */
-  LOCAL_REG_WRITE(dev, LOCAL_COMMAND, 0 );  
+  LOCAL_REG_WRITE(dev, LOCAL_COMMAND, 0 );
   return 0;
 }
 

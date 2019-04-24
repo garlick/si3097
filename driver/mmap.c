@@ -1,6 +1,6 @@
-/* 
+/*
 
-Linux 2.6 Driver for the 
+Linux Driver for the
 Spectral Instruments 3097 Camera Interface
 
 Copyright (C) 2006  Jeffrey R Hagen
@@ -21,9 +21,9 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 
 */
 
-/* mmap 
-   allocate the driver buffers and 
-   map it to the application 
+/* mmap
+   allocate the driver buffers and
+   map it to the application
 */
 
 #include <linux/version.h>
@@ -60,10 +60,10 @@ void si_vmaclose( struct vm_area_struct *area )
   struct SIDEVICE *dev;
 
   dev = (struct SIDEVICE *)area->vm_file->private_data;
-  
+
   if( dev->verbose )
     printk("SI vmaclose vmact %d\n", atomic_read(&dev->vmact) );
-  
+
   if( atomic_dec_and_test(&dev->vmact) )
     ;//wake_up_interruptible( &dev->mmap_block );
 
@@ -108,38 +108,36 @@ int si_vmafault( struct vm_fault *vmf )
   nbuf = off/dev->alloc_sm_buflen;
   loff = off % dev->alloc_sm_buflen;
   if( nbuf >= dev->dma_nbuf ) {
-    printk("SI fault, requested more mmap than data: nbuf %d max %d\n", 
+    printk("SI fault, requested more mmap than data: nbuf %d max %d\n",
       nbuf, dev->dma_nbuf );
     spin_unlock_irqrestore( &dev->nopage_lock, flags );
     return(VM_FAULT_SIGBUS);
   }
-  
+
   vaddr = ((unsigned char *)dev->sgl[nbuf].cpu) + loff;
 
   vmf->page = virt_to_page( vaddr );
-  get_page( vmf->page ); 
+  get_page( vmf->page );
   spin_unlock_irqrestore( &dev->nopage_lock, flags );
 
   return( 0 );
 }
 
 static struct vm_operations_struct si_vm_ops = {
-  .open  = si_vmaopen, 
-  .close = si_vmaclose, 
+  .open  = si_vmaopen,
+  .close = si_vmaclose,
   .fault = si_vmafault
 };
 
-int si_mmap(filp, vma )
-struct file *filp;
-struct vm_area_struct *vma;
+int si_mmap(struct file *filp, struct vm_area_struct *vma)
 {
   struct SIDEVICE *dev;
 
   dev = (struct SIDEVICE *)filp->private_data;
 
   if( dev->verbose )
-    printk("SI mmap vmact %d ptr 0x%x\n", 
-         atomic_read(&dev->vmact), (unsigned int)vma->vm_file );
+    printk("SI mmap vmact %d ptr 0x%lx\n",
+         atomic_read(&dev->vmact), (unsigned long)vma->vm_file );
 
   vma->vm_ops = &si_vm_ops;
   vma->vm_file = filp;
@@ -155,11 +153,10 @@ struct vm_area_struct *vma;
    dev->sgl holds an array of scatted gather tables
    which holds the pointers to the dma.
    An additional element, cpu is added to hold
-   the kernel side virt address of the hardware address 
+   the kernel side virt address of the hardware address
 */
 
-int si_config_dma( dev )
-struct SIDEVICE *dev;
+int si_config_dma(struct SIDEVICE *dev)
 {
   int nchains, nb, nbytes;
   unsigned int end_mask;
@@ -182,12 +179,12 @@ struct SIDEVICE *dev;
 
   if( dev->alloc_maxever == 0 ) { /* allocate the memory */
     if( dev->dma_cfg.total <= 0 ) {
-      printk("SI config.total %d\n", dev->dma_cfg.total ); 
+      printk("SI config.total %d\n", dev->dma_cfg.total );
       return -EIO;
     }
     if( dev->dma_cfg.maxever <= 0 )
       dev->dma_cfg.maxever = dev->dma_cfg.total;
-    
+
     dev->alloc_maxever = dev->dma_cfg.maxever;
     dev->alloc_buflen = dev->dma_cfg.buflen;
     si_alloc_memory(dev);
@@ -247,13 +244,13 @@ struct SIDEVICE *dev;
   }
 
   if( buflen != sm_buflen ) {
-    printk("SI WARNING buflen %d sm_buflen %d, not a multiple of page size\n", 
+    printk("SI WARNING buflen %d sm_buflen %d, not a multiple of page size\n",
       buflen, sm_buflen );
   }
 
   spin_lock_irqsave( &dev->dma_lock, flags );
 
-  if( dev->dma_cfg.config & SI_DMA_CONFIG_WAKEUP_EACH ) 
+  if( dev->dma_cfg.config & SI_DMA_CONFIG_WAKEUP_EACH )
     end_mask  = SIDMA_DPR_PCI_SRC| SIDMA_DPR_IRUP|SIDMA_DPR_TOPCI;
   else
     end_mask  = SIDMA_DPR_PCI_SRC| SIDMA_DPR_TOPCI;
@@ -261,7 +258,7 @@ struct SIDEVICE *dev;
   last = 0;
   if( dev->verbose )
     printk( "SI buflen %d dma_nbuf %d\n", buflen, dev->dma_nbuf );
-  
+
   local_addr = SI_LOCAL_BUSADDR;
   nchains = dev->dma_nbuf;
   for( nb=nchains-1; nb>=0; nb-- ) {
@@ -274,7 +271,7 @@ struct SIDEVICE *dev;
 
     last = (dma_addr_t)ch_dma & 0xfffffff0;
     setb = ((nb+1)&0x7f); /* set mem to see mmap working */
-    memset( (void *)ch->cpu, setb, sm_buflen );
+    memset( ch->cpu, setb, sm_buflen );
 
   }
 /* always wake up at the end */
@@ -285,8 +282,8 @@ struct SIDEVICE *dev;
 
 
   if( dev->verbose ) {
-    printk("SI si_config_dma sgl 0x%x sgl_pci 0x%x buflen %d sm_buflen %d nbuf %d\n", 
-     (unsigned int)dev->sgl, (unsigned int)dev->sgl_pci, 
+    printk("SI si_config_dma sgl 0x%lx sgl_pci 0x%x buflen %d sm_buflen %d nbuf %d\n",
+     (unsigned long)dev->sgl, (unsigned int)dev->sgl_pci,
      buflen, sm_buflen, nbuf  );
     if( isalloc )
       si_print_memtable( dev );
@@ -297,8 +294,7 @@ struct SIDEVICE *dev;
 
 /* allocate memory */
 
-int si_alloc_memory( dev )
-struct SIDEVICE *dev;
+int si_alloc_memory(struct SIDEVICE *dev)
 {
   int nbuf, buflen, sm_buflen, nb;
   struct SIDMA_SGL *ch;
@@ -310,10 +306,10 @@ struct SIDEVICE *dev;
   unsigned char setb;
 
   if( dev->sgl ) {
-    printk( "SI alloc memory already allocated\n"); 
+    printk( "SI alloc memory already allocated\n");
     return -EIO;
   }
-  
+
   nbuf = dev->alloc_maxever / dev->alloc_buflen;
   if( (dev->alloc_maxever % dev->alloc_buflen) )
     nbuf++;
@@ -324,20 +320,21 @@ struct SIDEVICE *dev;
   if( (dev->alloc_buflen % PAGE_SIZE) == 0 )
     dev->alloc_sm_buflen = dev->alloc_buflen;
   else
-    dev->alloc_sm_buflen = dev->alloc_buflen + PAGE_SIZE - 
+    dev->alloc_sm_buflen = dev->alloc_buflen + PAGE_SIZE -
                           (dev->alloc_buflen%PAGE_SIZE);
 
   sm_buflen = dev->alloc_sm_buflen;
   local_addr = SI_LOCAL_BUSADDR;
 
   dev->sgl_len = nbuf * sizeof(struct SIDMA_SGL);
-  dev->sgl = pci_alloc_consistent( dev->pci, dev->sgl_len, &dev->sgl_pci); 
-//  dev->sgl = jeff_alloc( dev->sgl_len, &dev->sgl_pci); 
+  dev->sgl = dma_alloc_coherent(&dev->pci->dev, dev->sgl_len, &dev->sgl_pci,
+                                GFP_KERNEL);
+//  dev->sgl = jeff_alloc( dev->sgl_len, &dev->sgl_pci);
 
 //  spin_lock_irqsave( &dev->dma_lock, flags );
 
   if( !dev->sgl ) {
-    printk( "SI no memory allocating table\n"); 
+    printk( "SI no memory allocating table\n");
 //    spin_unlock_irqrestore( &dev->dma_lock, flags );
     return -EIO;
   }
@@ -348,16 +345,16 @@ struct SIDEVICE *dev;
 
   for( nb=nbuf-1; nb>=0; nb-- ) {
 
-    cpu = pci_alloc_consistent( dev->pci, sm_buflen, &dma_buf ); 
-    //cpu = jeff_alloc( sm_buflen, &dma_buf ); 
+    cpu = dma_alloc_coherent(&dev->pci->dev, sm_buflen, &dma_buf, GFP_KERNEL);
+    //cpu = jeff_alloc( sm_buflen, &dma_buf );
     if( !cpu ) {
-      printk( "SI no memory allocating buffer %d\n", nbuf - nb); 
+      printk( "SI no memory allocating buffer %d\n", nbuf - nb);
 //      spin_unlock_irqrestore( &dev->dma_lock, flags );
-      si_free_sgl(dev);   
+      si_free_sgl(dev);
       return -EIO;
     }
 
-//   if I am already doing the pci_alloc_consistent, why do I need this 
+//   if I am already doing the pci_alloc_consistent, why do I need this
     pend = virt_to_page(cpu + buflen-1);
     page = virt_to_page(cpu);
     while( page <= pend ) {
@@ -370,7 +367,7 @@ struct SIDEVICE *dev;
     ch_dma = dev->sgl_pci + sizeof(struct SIDMA_SGL )*nb; /*bus side address*/
     ch->padr = (__u32)dma_buf;
     ch->ladr = local_addr;
-    ch->cpu = (__u32)cpu;
+    ch->cpu = cpu;
     ch->siz = 0;
     ch->dpr = 0;
     dev->total_allocs++;
@@ -388,8 +385,7 @@ struct SIDEVICE *dev;
  return 0;
 }
 
-void si_print_memtable( dev )
-struct SIDEVICE *dev;
+void si_print_memtable(struct SIDEVICE *dev)
 {
   int nb;
   struct SIDMA_SGL *ch;
@@ -403,22 +399,21 @@ struct SIDEVICE *dev;
   for( nb=0; nb< dev->dma_nbuf; nb++ ) {
     ch = &dev->sgl[nb];
     if( dev->verbose )
-      printk("SI 0x%x 0x%x 0x%x 0x%x 0x%x 0x%x\n", 
-      (__u32)dev->sgl + sizeof(struct SIDMA_SGL)* nb, 
-        ch->padr, ch->ladr, ch->siz, ch->dpr, ch->cpu );
+      printk("SI 0x%lx 0x%x 0x%x 0x%x 0x%x 0x%lx\n",
+      (unsigned long)dev->sgl + sizeof(struct SIDMA_SGL)* nb,
+        ch->padr, ch->ladr, ch->siz, ch->dpr, (unsigned long)ch->cpu );
     ch++;
   }
 }
 
-void si_free_sgl( dev )
-struct SIDEVICE *dev;
+void si_free_sgl(struct SIDEVICE *dev)
 {
   int n, nchains;
   struct SIDMA_SGL *ch, *dchain;
   int total_frees, total_bytes, sm_buflen;
   struct page *page, *pend;
   unsigned long flags;
-  
+
   if( !dev->sgl )
     return;
 
@@ -458,18 +453,17 @@ struct SIDEVICE *dev;
       page++;
     }
 
-    pci_free_consistent( dev->pci, sm_buflen, 
-      (void *)ch->cpu, ch->padr );
+    dma_free_coherent(&dev->pci->dev, sm_buflen, ch->cpu, ch->padr);
     total_frees++;
     total_bytes += dev->dma_cfg.buflen;
   }
-  pci_free_consistent( dev->pci, dev->sgl_len, dchain, dev->sgl_pci );
+  dma_free_coherent(&dev->pci->dev, dev->sgl_len, dchain, dev->sgl_pci);
   total_frees++;
   total_bytes += dev->sgl_len;
   dev->dma_cfg.buflen = 0;
   dev->sgl_pci = 0;
   if( dev->verbose )
-    printk("SI free_sgl allocates freed %d, bytes %d\n", 
+    printk("SI free_sgl allocates freed %d, bytes %d\n",
     total_frees, total_bytes );
 
   dev->total_allocs = 0;
@@ -483,8 +477,7 @@ struct SIDEVICE *dev;
 
 /* start configured dma */
 
-int si_start_dma(dev)
-struct SIDEVICE *dev;
+int si_start_dma(struct SIDEVICE *dev)
 {
   int n_pixels;
   int rb_count;
@@ -497,7 +490,7 @@ struct SIDEVICE *dev;
     printk("SI start_dma test mode \n");
     return 0;
   }
-  
+
   reg = PLX_REG8_READ(dev, PCI9054_DMA_COMMAND_STAT );
   if( reg & 1 ) { /* already on stop */
     printk("SI start_dma already on stopping first, dma_stat 0x%x\n", reg );
@@ -525,8 +518,8 @@ struct SIDEVICE *dev;
 
 
   // enable FIFOs
-  LOCAL_REG_WRITE(dev, LOCAL_COMMAND, (LC_FIFO_MRS_L | LC_FIFO_PRS_L));  
-  
+  LOCAL_REG_WRITE(dev, LOCAL_COMMAND, (LC_FIFO_MRS_L | LC_FIFO_PRS_L));
+
   atomic_set(&dev->dma_done, 0x1); // reflection of status bit
   dev->dma_cur = 0;
   dev->dma_next = 0;
@@ -556,9 +549,7 @@ struct SIDEVICE *dev;
 
 /* stop running dma */
 
-int si_stop_dma(dev, status )
-struct SIDEVICE *dev;
-struct SI_DMA_STATUS *status;
+int si_stop_dma(struct SIDEVICE *dev, struct SI_DMA_STATUS *status)
 {
   unsigned long flags;
   int ret;
@@ -580,12 +571,12 @@ struct SI_DMA_STATUS *status;
 
   if( cmd_stat & 1 ) {
     ret = 10; /* jiffies timeout */
-    wait_event_interruptible_timeout( 
+    wait_event_interruptible_timeout(
        dev->dma_block, (atomic_read(&dev->dma_done)&SI_DMA_STATUS_DONE), ret );
     if( !(atomic_read(&dev->dma_done)&SI_DMA_STATUS_DONE) ) {
        printk("SI timeout in abort sequence\n");
        ret = -EIO;
-    } else 
+    } else
       ret = 0;
   }
   dev->abort_active = 0;
@@ -596,9 +587,7 @@ struct SI_DMA_STATUS *status;
 
 /* no block status request */
 
-int si_dma_status(dev, stat)
-struct SIDEVICE *dev;
-struct SI_DMA_STATUS *stat;
+int si_dma_status(struct SIDEVICE *dev, struct SI_DMA_STATUS *stat)
 {
   if( !stat )
     return 0;
@@ -614,9 +603,7 @@ struct SI_DMA_STATUS *stat;
 
 /* block for next buffer complete */
 
-int si_dma_next(dev, stat)
-struct SIDEVICE *dev;
-struct SI_DMA_STATUS *stat;
+int si_dma_next(struct SIDEVICE *dev, struct SI_DMA_STATUS *stat)
 {
   int next, cur, ret, tmout;
   unsigned long flags;
@@ -630,11 +617,11 @@ struct SI_DMA_STATUS *stat;
     spin_unlock_irqrestore( &dev->dma_lock, flags );
     if( next >= cur ) {
       if( !si_dma_wakeup(dev) ) {
-        wait_event_interruptible_timeout( dev->dma_block, 
+        wait_event_interruptible_timeout( dev->dma_block,
           si_dma_wakeup( dev ), tmout );
         if( si_dma_wakeup(dev) )
           ret = 0;
-        else 
+        else
           ret = -EWOULDBLOCK;
       } else {
         ret = 0;
@@ -644,11 +631,11 @@ struct SI_DMA_STATUS *stat;
       }
   } else {
     if( !si_dma_wakeup(dev) ) {
-      wait_event_interruptible_timeout( dev->dma_block, 
+      wait_event_interruptible_timeout( dev->dma_block,
         si_dma_wakeup( dev ), tmout );
       if( si_dma_wakeup(dev) )
         ret = 0;
-      else 
+      else
         ret = -EWOULDBLOCK;
     } else  {
       ret = 0;
@@ -667,8 +654,7 @@ struct SI_DMA_STATUS *stat;
 
 /* true if its time to wakeup dma_block */
 
-int si_dma_wakeup( dev )
-struct SIDEVICE *dev;
+int si_dma_wakeup(struct SIDEVICE *dev)
 {
   int ret;
   int done;
@@ -691,15 +677,14 @@ struct SIDEVICE *dev;
 
 /* wait for vma close */
 
-int si_wait_vmaclose( dev )
-struct SIDEVICE *dev;
+int si_wait_vmaclose(struct SIDEVICE *dev)
 {
   int tmout;
 
   tmout = VMACLOSE_TIMEOUT;
 
   printk("si_wait_vmaclose waiting\n");
-  wait_event_interruptible_timeout( dev->mmap_block, 
+  wait_event_interruptible_timeout( dev->mmap_block,
     (atomic_read(&dev->vmact)==0), tmout );
 
   printk("si_wait_vmaclose wakeup\n");
@@ -716,8 +701,7 @@ struct SIDEVICE *dev;
 
 /* return byte count progress */
 
-int si_dma_progress( dev )
-struct SIDEVICE *dev;
+int si_dma_progress(struct SIDEVICE *dev)
 {
   __u32 pci;
   int nb, nchains, prog;
@@ -751,9 +735,7 @@ struct SIDEVICE *dev;
 }
 
 
-void *jeff_alloc( size, pphy )
-int size;
-dma_addr_t *pphy;
+void *jeff_alloc(int size, dma_addr_t *pphy)
 {
   unsigned char *km;
 //  unsigned int phy, phy_ix;
@@ -767,14 +749,14 @@ dma_addr_t *pphy;
     return NULL;
   } else {
     //int i;
-    
+
    memset( km, 0, size );
 
   if( pphy )
     *pphy = (dma_addr_t) virt_to_phys( km );
 
 //    count = 0;
-    
+
 //    for( i=0; i<TEST_SIZE; i+=8192 ) {
 //       phy_ix = (unsigned int)virt_to_phys( km+i );
 //       if( phy_ix != (phy + i ))
@@ -784,9 +766,9 @@ dma_addr_t *pphy;
 //      printk("SI TEST worked count %d\n", count );
 //    else
 //      printk("SI TEST failed count %d\n", count );
-//    
+//
 //    free_pages((unsigned long)km, order);
-  
+
     return (void *)km;
   }
 }

@@ -1,6 +1,6 @@
-/* 
+/*
 
-Linux 2.6 Driver for the 
+Linux Driver for the
 Spectral Instruments 3097 Camera Interface
 
 Copyright (C) 2006  Jeffrey R Hagen
@@ -198,7 +198,7 @@ void si_bottom_half( struct work_struct *work )
           } else
             i = 1;  // just get 1 at a time
           while (i--) {  // fill fifo as much as possible
-            UART_REG_WRITE(dev, SERIAL_TX, 
+            UART_REG_WRITE(dev, SERIAL_TX,
               dev->Uart.txbuf[dev->Uart.txget++]);
             if (dev->Uart.txget == dev->Uart.serialbufsize)
               dev->Uart.txget = 0;
@@ -253,21 +253,21 @@ void si_bottom_half( struct work_struct *work )
       /* Clear DMA interrupt and disable if done */
       PLX_REG8_WRITE( dev, PCI9054_DMA_COMMAND_STAT, (1<<3));
       /* careful not to read local bus during DMA */
-      LOCAL_REG_WRITE(dev, LOCAL_COMMAND, LC_FIFO_MRS_L );  
+      LOCAL_REG_WRITE(dev, LOCAL_COMMAND, LC_FIFO_MRS_L );
       rb_count  =  LOCAL_REG_READ(dev, LOCAL_PIX_CNT_LL) & 0xff;
       rb_count += (LOCAL_REG_READ(dev, LOCAL_PIX_CNT_ML) & 0xff) << 8;
       rb_count += (LOCAL_REG_READ(dev, LOCAL_PIX_CNT_MH) & 0xff) << 16;
       rb_count += (LOCAL_REG_READ(dev, LOCAL_PIX_CNT_HH) & 0xff) << 24;
-      if( !dev->abort_active && rb_count ) 
+      if( !dev->abort_active && rb_count )
         printk("SI bh DMA0 irup, rb_count not zero %d\n", rb_count );
       dev->rb_count = rb_count;
-       
+
     } else {
       PLX_REG8_WRITE( dev, PCI9054_DMA_COMMAND_STAT, (1<<3)|(1<<0));
     }
 
     if( dev->verbose )
-      printk("SI bh DMA0 irup, int_stat 0x%x mode 0x%x dma_stat 0x%x\n", 
+      printk("SI bh DMA0 irup, int_stat 0x%x mode 0x%x dma_stat 0x%x\n",
       int_stat, dev->irup_reg, reg );
 
     dev->dma_cur++;
