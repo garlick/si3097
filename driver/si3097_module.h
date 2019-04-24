@@ -70,6 +70,24 @@ struct SIDEVICE {
 	int alloc_sm_buflen; /* dma_buflen padded out to PAGE_SIZE */
 };
 
+#define si_dbg(dev, fmt, arg...) do { \
+	if ((dev)->verbose) \
+		dev_dbg(&(dev)->pci->dev, fmt, ##arg); \
+} while(0)
+#define si_serial_dbg(dev, fmt, arg...) do { \
+	if (((dev)->verbose & SI_VERBOSE_SERIAL)) \
+		dev_dbg(&(dev)->pci->dev, fmt, ##arg); \
+} while(0)
+#define si_dma_dbg(dev, fmt, arg...) do { \
+	if (((dev)->verbose & SI_VERBOSE_DMA)) \
+		dev_dbg(&(dev)->pci->dev, fmt, ##arg); \
+} while(0)
+
+#define si_info(dev, fmt, arg...) \
+	dev_info(&(dev)->pci->dev, fmt, ##arg)
+#define si_err(dev, fmt, arg...) \
+	dev_err(&(dev)->pci->dev, fmt, ##arg)
+
 #define VMACLOSE_TIMEOUT (10 * HZ) /* seconds */
 
 // local address of the fifo read (no increment)
