@@ -320,47 +320,46 @@ struct SIDMA_SGL {
 #define FALSE 0
 
 // Function prototypes
-
 irqreturn_t si_interrupt(int irq, struct SIDEVICE *dev);
-int si_set_serial_params(struct SIDEVICE *, struct SI_SERIAL_PARAM *);
-int si_init_uart(struct SIDEVICE *);
-void si_cleanup_serial(struct SIDEVICE *);
-int si_transmit_serial(struct SIDEVICE *, __u8);
+int si_set_serial_params(struct SIDEVICE *dev, struct SI_SERIAL_PARAM *param);
+int si_init_uart(struct SIDEVICE *dev);
+void si_cleanup_serial(struct SIDEVICE *dev);
+int si_transmit_serial(struct SIDEVICE *dev, __u8 data);
 
-int si_receive_serial(struct SIDEVICE *, __u8 *);
-int si_print_uart_stat(struct SIDEVICE *);
-int si_uart_break(struct SIDEVICE *, int);
+int si_receive_serial(struct SIDEVICE *dev, __u8 *pdata);
+int si_print_uart_stat(struct SIDEVICE *dev);
+int si_uart_break(struct SIDEVICE *dev, int break_time);
 
-int si_stop_dma(struct SIDEVICE *, struct SI_DMA_STATUS *);
+int si_stop_dma(struct SIDEVICE *dev, struct SI_DMA_STATUS *status);
 void si_free_sgl(struct SIDEVICE *dev);
 
-struct page *si_vmanopage(struct vm_area_struct *, unsigned long, int *);
-
-int si_config_dma(struct SIDEVICE *);
+int si_config_dma(struct SIDEVICE *dev);
 void si_free_sgl(struct SIDEVICE *dev);
-long si_ioctl(struct file *, unsigned int, unsigned long);
+long si_ioctl(struct file *filp, unsigned int command, unsigned long args);
 
-int si_start_dma(struct SIDEVICE *);
-int si_stop_dma(struct SIDEVICE *, struct SI_DMA_STATUS *);
-int si_dma_status(struct SIDEVICE *, struct SI_DMA_STATUS *);
-int si_dma_next(struct SIDEVICE *, struct SI_DMA_STATUS *);
-int si_reset(struct SIDEVICE *);
+int si_start_dma(struct SIDEVICE *dev);
+int si_stop_dma(struct SIDEVICE *dev, struct SI_DMA_STATUS *status);
+int si_dma_status(struct SIDEVICE *dev, struct SI_DMA_STATUS *status);
+int si_dma_next(struct SIDEVICE *dev, struct SI_DMA_STATUS *status);
+int si_reset(struct SIDEVICE *dev);
 
-int si_open(struct inode *, struct file *);
-int si_close(struct inode *, struct file *);
-ssize_t si_read(struct file *, char __user *, size_t, loff_t *);
-ssize_t si_write(struct file *, const char __user *, size_t, loff_t *);
-unsigned int si_poll(struct file *, poll_table *);
+int si_open(struct inode *inode, struct file *file);
+int si_close(struct inode *inode, struct file *file);
+ssize_t si_read(struct file *file, char __user *buf, size_t size,
+		loff_t *offset);
+ssize_t si_write(struct file *file, const char __user *buf, size_t size,
+		 loff_t *offset);
+unsigned int si_poll(struct file *dev, poll_table *tab);
 
 int si_mmap(struct file *filp, struct vm_area_struct *vma);
-int si_uart_more_to_write(struct SIDEVICE *);
-int si_dma_wakeup(struct SIDEVICE *);
-int si_uart_read_ready(struct SIDEVICE *);
-int si_uart_tx_empty(struct SIDEVICE *);
-void si_uart_clear(struct SIDEVICE *);
-void si_get_serial_params(struct SIDEVICE *, struct SI_SERIAL_PARAM *);
+int si_uart_more_to_write(struct SIDEVICE *dev);
+int si_dma_wakeup(struct SIDEVICE *dev);
+int si_uart_read_ready(struct SIDEVICE *dev);
+int si_uart_tx_empty(struct SIDEVICE *dev);
+void si_uart_clear(struct SIDEVICE *dev);
+void si_get_serial_params(struct SIDEVICE *dev, struct SI_SERIAL_PARAM *param);
 void si_bottom_half(struct work_struct *work);
-int si_wait_vmaclose(struct SIDEVICE *);
+int si_wait_vmaclose(struct SIDEVICE *dev);
 int si_alloc_memory(struct SIDEVICE *dev);
 void si_print_memtable(struct SIDEVICE *dev);
-int si_dma_progress(struct SIDEVICE *);
+int si_dma_progress(struct SIDEVICE *dev);
