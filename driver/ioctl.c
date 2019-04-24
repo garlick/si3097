@@ -34,215 +34,208 @@ Foundation, Inc., 51 Franklin Street, Fifth Floor, Boston, MA  02110-1301, USA.
 #include "si3097.h"
 #include "si3097_module.h"
 
+/* si_ioctl:  Processes the IOCTL messages sent to this device */
 
-
- /* si_ioctl:  Processes the IOCTL messages sent to this device */
-
-long si_ioctl( struct file *filp, unsigned int cmd, unsigned long  args )
+long si_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 {
-  int ret;
-  struct SI_DMA_STATUS   dma_status;
-  struct SI_SERIAL_PARAM serial_param;
-  struct SIDEVICE  *dev;
-  unsigned long flags;
+	int ret;
+	struct SI_DMA_STATUS dma_status;
+	struct SI_SERIAL_PARAM serial_param;
+	struct SIDEVICE *dev;
+	unsigned long flags;
 
-  dev = (struct SIDEVICE *)filp->private_data;
-  if( !dev )
-    return -EIO;
+	dev = (struct SIDEVICE *)filp->private_data;
+	if (!dev)
+		return -EIO;
 
+	//  if( dev->verbose )
+	//    printk("SI ioctl %d\n",  _IOC_SIZE(cmd) );
 
-//  if( dev->verbose )
-//    printk("SI ioctl %d\n",  _IOC_SIZE(cmd) );
+	/*  Si Interface only */
 
-  /*  Si Interface only */
+	ret = 0;
+	switch (cmd) {
+	case SI_IOCTL_RESET:
+		ret = si_reset(dev); /* parameter ignored */
+		break;
 
-  ret = 0;
-  switch (cmd) {
-    case SI_IOCTL_RESET:
-      ret = si_reset( dev ); /* parameter ignored */
-      break;
+	case SI_IOCTL_SERIAL_IN_STATUS: {
+		int status;
 
-    case SI_IOCTL_SERIAL_IN_STATUS:
-      {
-      int status;
+		spin_lock_irqsave(&dev->uart_lock, flags);
+		status = dev->Uart.rxcnt;
+		spin_unlock_irqrestore(&dev->uart_lock, flags);
 
-      spin_lock_irqsave( &dev->uart_lock, flags );
-      status = dev->Uart.rxcnt;
-      spin_unlock_irqrestore( &dev->uart_lock, flags );
+		ret = put_user(status, (int __user *)args);
+		if (dev->verbose & SI_VERBOSE_SERIAL)
+			printk("SI SI_IOCTL_SERIAL_IN_STATUS %d\n", status);
+	} break;
 
-      ret = put_user( status, (int __user *)args);
-      if( dev->verbose & SI_VERBOSE_SERIAL )
-        printk("SI SI_IOCTL_SERIAL_IN_STATUS %d\n", status );
-      }
-      break;
+	case SI_IOCTL_SERIAL_OUT_STATUS: {
+		int ul;
 
-    case SI_IOCTL_SERIAL_OUT_STATUS:
-      {
-        int ul;
+		spin_lock_irqsave(&dev->uart_lock, flags);
+		ul = dev->Uart.serialbufsize - dev->Uart.txcnt;
+		spin_unlock_irqrestore(&dev->uart_lock, flags);
+		ret = put_user(ul, (int __user *)args);
+		if (dev->verbose & SI_VERBOSE_SERIAL)
+			printk("SI SI_IOCTL_SERIAL_OUT_STATUS %d\n", ul);
+	} break;
 
-        spin_lock_irqsave( &dev->uart_lock, flags );
-        ul = dev->Uart.serialbufsize - dev->Uart.txcnt;
-        spin_unlock_irqrestore( &dev->uart_lock, flags );
-        ret = put_user( ul, (int __user *)args);
-        if( dev->verbose& SI_VERBOSE_SERIAL )
-          printk("SI SI_IOCTL_SERIAL_OUT_STATUS %d\n", ul);
-      }
-      break;
+	case SI_IOCTL_GET_SERIAL:
+		si_get_serial_params(dev, &serial_param);
+		if (copy_to_user((struct SI_SERIAL_PARAM __user *)args,
+				 &serial_param, sizeof(struct SI_SERIAL_PARAM)))
+			ret = -EFAULT;
+		break;
+	case SI_IOCTL_SET_SERIAL:
 
-    case SI_IOCTL_GET_SERIAL:
-      si_get_serial_params( dev, &serial_param );
-      if(copy_to_user( (struct SI_SERIAL_PARAM __user *)args, &serial_param,
-        sizeof(struct SI_SERIAL_PARAM)))
-          ret = -EFAULT;
-      break;
-    case SI_IOCTL_SET_SERIAL:
+		if (copy_from_user(&serial_param,
+				   (struct SI_SERIAL_PARAM *)args,
+				   sizeof(struct SI_SERIAL_PARAM)))
+			return (-EFAULT);
 
-      if(copy_from_user( &serial_param, (struct SI_SERIAL_PARAM *)args,
-        sizeof(struct SI_SERIAL_PARAM)))
-          return (-EFAULT);
+		if (dev->verbose & SI_VERBOSE_SERIAL)
+			printk("SI_IOCTL_SERIAL_PARAMS, baud %d\n",
+			       serial_param.baud);
 
-      if( dev->verbose & SI_VERBOSE_SERIAL)
-        printk("SI_IOCTL_SERIAL_PARAMS, baud %d\n", serial_param.baud );
+		si_set_serial_params(dev, &serial_param);
+		ret = 0;
 
-      si_set_serial_params( dev, &serial_param );
-      ret = 0;
+		break;
+	case SI_IOCTL_SERIAL_CLEAR:
+		si_uart_clear(dev);
+		ret = 0;
+		break;
 
-      break;
-    case SI_IOCTL_SERIAL_CLEAR:
-      si_uart_clear( dev );
-      ret = 0;
-      break;
+	case SI_IOCTL_SERIAL_BREAK: {
+		int tim;
 
-    case SI_IOCTL_SERIAL_BREAK:
-      {
-        int tim;
+		if ((ret = get_user(tim, (int __user *)args)) < 0)
+			break;
 
-        if( (ret = get_user( tim, (int __user *)args ))<0 )
-          break;
+		if (tim < 0 || tim > 1000)
+			tim = 1000; // limit to 1 second
 
-        if (tim < 0 || tim > 1000)
-          tim = 1000;        // limit to 1 second
+		if (dev->verbose & SI_VERBOSE_SERIAL)
+			printk("SI_IOCTL_SERIAL_BREAK %d\n", tim);
 
-        if( dev->verbose& SI_VERBOSE_SERIAL )
-          printk("SI_IOCTL_SERIAL_BREAK %d\n", tim );
+		si_uart_break(dev, tim);
+	} break;
 
-        si_uart_break(dev, tim);
-      }
-      break;
+	// DMA related entries
+	case SI_IOCTL_DMA_INIT:
+		if (dev->verbose)
+			printk("SI IOCTL_DMA_INIT\n");
 
+		if (copy_from_user(&dev->dma_cfg, (struct SI_DMA_CONFIG *)args,
+				   sizeof(struct SI_DMA_CONFIG))) {
+			ret = -EFAULT;
+			break;
+		}
+		ret = si_config_dma(dev);
 
-    // DMA related entries
-    case SI_IOCTL_DMA_INIT:
-      if( dev->verbose )
-        printk("SI IOCTL_DMA_INIT\n");
+		break;
 
-      if(copy_from_user( &dev->dma_cfg, (struct SI_DMA_CONFIG *)args,
-        sizeof(struct SI_DMA_CONFIG))) {
-          ret = -EFAULT;
-          break;
-      }
-      ret = si_config_dma( dev );
+	case SI_IOCTL_DMA_START:
+		if (dev->verbose)
+			printk("SI_IOCTL_DMA_START\n");
 
-      break;
+		if ((ret = si_start_dma(dev)) < 0)
+			break;
 
-    case SI_IOCTL_DMA_START:
-      if( dev->verbose )
-        printk("SI_IOCTL_DMA_START\n");
+		if ((ret = si_dma_status(dev, &dma_status)) < 0)
+			break;
 
-      if((ret = si_start_dma(dev))<0)
-        break;
+		if (args &&
+		    copy_to_user((struct SI_DMA_STATUS *)args, &dma_status,
+				 sizeof(struct SI_DMA_STATUS)))
+			ret = -EFAULT;
+		break;
 
-      if( (ret = si_dma_status(dev, &dma_status ))<0 )
-        break;
+	case SI_IOCTL_DMA_STATUS:
+		if (dev->verbose)
+			printk("SI_IOCTL_DMA_STATUS\n");
+		if ((ret = si_dma_status(dev, &dma_status)) < 0)
+			break;
 
-      if(args && copy_to_user( (struct SI_DMA_STATUS *)args, &dma_status,
-        sizeof(struct SI_DMA_STATUS)))
-          ret = -EFAULT;
-      break;
+		if (copy_to_user((struct SI_DMA_STATUS *)args, &dma_status,
+				 sizeof(struct SI_DMA_STATUS)))
+			ret = -EFAULT;
+		break;
 
-    case SI_IOCTL_DMA_STATUS:
-      if( dev->verbose )
-        printk("SI_IOCTL_DMA_STATUS\n");
-      if( (ret = si_dma_status(dev, &dma_status ))<0 )
-        break;
+	case SI_IOCTL_DMA_NEXT:
+		if (dev->verbose)
+			printk("SI_IOCTL_DMA_NEXT\n");
 
-      if(copy_to_user( (struct SI_DMA_STATUS *)args, &dma_status,
-        sizeof(struct SI_DMA_STATUS)))
-          ret = -EFAULT;
-      break;
+		ret = si_dma_next(dev, &dma_status);
+		if (copy_to_user((struct SI_DMA_STATUS *)args, &dma_status,
+				 sizeof(struct SI_DMA_STATUS)))
+			ret = -EFAULT;
+		break;
 
-    case SI_IOCTL_DMA_NEXT:
-      if( dev->verbose )
-        printk("SI_IOCTL_DMA_NEXT\n");
+	case SI_IOCTL_DMA_ABORT:
+		if (dev->verbose)
+			printk("SI_IOCTL_DMA_ABORT\n");
 
-      ret = si_dma_next(dev, &dma_status );
-      if(copy_to_user( (struct SI_DMA_STATUS *)args, &dma_status,
-        sizeof(struct SI_DMA_STATUS)))
-          ret = -EFAULT;
-      break;
+		if ((ret = si_stop_dma(dev, &dma_status)) < 0)
+			break;
 
-    case SI_IOCTL_DMA_ABORT:
-      if( dev->verbose )
-        printk("SI_IOCTL_DMA_ABORT\n");
+		if (args &&
+		    copy_to_user((struct SI_DMA_STATUS *)args, &dma_status,
+				 sizeof(struct SI_DMA_STATUS)))
+			ret = -EFAULT;
+		break;
+	case SI_IOCTL_VERBOSE:
+		ret = get_user(dev->verbose, (int __user *)args);
+		break;
 
-      if((ret = si_stop_dma(dev, &dma_status)) <0 )
-        break;
+	case SI_IOCTL_SETPOLL:
+		ret = get_user(dev->setpoll, (int __user *)args);
+		if (dev->verbose) {
+			if (dev->setpoll == SI_SETPOLL_UART)
+				printk("SI setpoll set to uart\n");
+			else
+				printk("SI setpoll set to dma\n");
+		}
+		break;
 
-      if(args && copy_to_user( (struct SI_DMA_STATUS *)args, &dma_status,
-        sizeof(struct SI_DMA_STATUS)))
-          ret = -EFAULT;
-      break;
-    case SI_IOCTL_VERBOSE:
-      ret = get_user( dev->verbose, (int __user *)args );
-      break;
+	case SI_IOCTL_FREEMEM:
+		if (dev->verbose)
+			printk("SI freemem\n");
 
-    case SI_IOCTL_SETPOLL:
-      ret = get_user( dev->setpoll, (int __user *)args );
-      if( dev->verbose ) {
-         if( dev->setpoll == SI_SETPOLL_UART )
-           printk("SI setpoll set to uart\n");
-         else
-           printk("SI setpoll set to dma\n");
-      }
-      break;
+		if ((ret = si_wait_vmaclose(
+			     dev))) { /* make sure munmap before free */
+			printk("SI freemem timeout waiting for munmap\n");
+			return ret;
+		}
 
-    case SI_IOCTL_FREEMEM:
-      if( dev->verbose )
-        printk("SI freemem\n");
+		if (dev->sgl) {
+			si_stop_dma(dev, NULL);
+			si_free_sgl(dev);
+		} else {
+			if (dev->verbose)
+				printk("SI freemem no data allocated\n");
+		}
+		break;
 
-      if( (ret = si_wait_vmaclose( dev )) ) { /* make sure munmap before free */
-        printk("SI freemem timeout waiting for munmap\n");
-        return ret;
-      }
+	default:
+		printk("Unsupported SI_IOCTL_Xxx (%02d)\n", _IOC_NR(cmd));
+		ret = -EINVAL;
+		break;
+	}
 
-      if( dev->sgl ) {
-        si_stop_dma(dev, NULL);
-        si_free_sgl(dev);
-      } else {
-        if( dev->verbose )
-          printk("SI freemem no data allocated\n");
-      }
-      break;
+	//  if( dev->verbose )
+	//    printk("SI completed ioctl %d\n", ret );
 
-    default:
-      printk( "Unsupported SI_IOCTL_Xxx (%02d)\n", _IOC_NR(cmd));
-      ret = -EINVAL;
-      break;
-  }
-
-//  if( dev->verbose )
-//    printk("SI completed ioctl %d\n", ret );
-
-  return ret;
+	return ret;
 }
-
 
 int si_reset(struct SIDEVICE *dev)
 {
-  if( dev->verbose )
-    printk("SI master local reset\n" );
-  /* do the master reset local bus */
-  LOCAL_REG_WRITE(dev, LOCAL_COMMAND, 0 );
-  return 0;
+	if (dev->verbose)
+		printk("SI master local reset\n");
+	/* do the master reset local bus */
+	LOCAL_REG_WRITE(dev, LOCAL_COMMAND, 0);
+	return 0;
 }
-
