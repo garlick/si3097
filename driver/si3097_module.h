@@ -73,15 +73,15 @@ struct SIDEVICE {
 #define si_dbg(dev, fmt, arg...) do { \
 	if ((dev)->verbose) \
 		dev_dbg(&(dev)->pci->dev, fmt, ##arg); \
-} while(0)
+} while (0)
 #define si_serial_dbg(dev, fmt, arg...) do { \
 	if (((dev)->verbose & SI_VERBOSE_SERIAL)) \
 		dev_dbg(&(dev)->pci->dev, fmt, ##arg); \
-} while(0)
+} while (0)
 #define si_dma_dbg(dev, fmt, arg...) do { \
 	if (((dev)->verbose & SI_VERBOSE_DMA)) \
 		dev_dbg(&(dev)->pci->dev, fmt, ##arg); \
-} while(0)
+} while (0)
 
 #define si_info(dev, fmt, arg...) \
 	dev_info(&(dev)->pci->dev, fmt, ##arg)

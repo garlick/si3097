@@ -94,11 +94,10 @@ int si_show_proc(struct seq_file *seq, void *private)
 		d = &si_devices[nr];
 		pci = d->pci;
 		if (pci) {
-			seq_printf(
-				seq,
-				"SI %s, major %d minor %d devfn %d irq %d isopen %d\n",
-				pci_name(pci), MAJOR(si_dev), nr, pci->devfn,
-				pci->irq, atomic_read(&d->isopen));
+			seq_printf(seq,
+			"SI %s, major %d minor %d devfn %d irq %d isopen %d\n",
+			pci_name(pci), MAJOR(si_dev), nr, pci->devfn,
+			pci->irq, atomic_read(&d->isopen));
 
 		} else {
 			seq_printf(seq, "SI TEST major %d minor %d\n",
@@ -147,12 +146,12 @@ static int si_configure_device(struct pci_dev *pci,
 	int nr = si_count;
 
 	if (nr == SI_MAX_CARDS) {
-		printk(KERN_INFO "SI ignoring card - max %d\n", SI_MAX_CARDS);
+		dev_info(&pci->dev, "ignoring card - max %d\n", SI_MAX_CARDS);
 		return (-EINVAL);
 	}
 
 	if (pci_set_dma_mask(pci, 0xffffffff) != 0) {
-		printk("SI pci_set_dma_mask failed\n");
+		dev_info(&pci->dev, "pci_set_dma_mask failed\n");
 		return (-EIO);
 	}
 
@@ -183,25 +182,24 @@ static int si_configure_device(struct pci_dev *pci,
 		dev->bar_len[i] = len;
 		dev->bar[i] = pci_iomap(pci, i, len);
 
-		if (dev->verbose)
-			printk("SI address of bar %d: 0x%lx\n", i,
-			       (unsigned long)dev->bar[i]);
+		si_dbg(dev, "address of bar %d: 0x%lx\n", i,
+			(unsigned long)dev->bar[i]);
 	}
 
 	if (pci->irq) {
 		if ((error = request_irq(pci->irq, (void *)si_interrupt,
 					 IRQF_SHARED, "SI", dev))) {
-			printk("SI %s failed to get irq %d error %d\n",
-			       pci_name(pci), pci->irq, error);
-			printk("SI skipping device\n");
+			si_info(dev, "failed to get irq %d error %d\n",
+				pci->irq, error);
+			si_info(dev, "skipping device\n");
 			error = -ENODEV;
 			goto out;
 		}
 	} else
-		printk("SI device %s no pci interupt\n", pci_name(pci));
+		si_info(dev, "no pci interupt\n");
 
-	printk("SI device %s irup 0x%x irq 0x%x id 0x%x\n", pci_name(pci), irup,
-	       pci->irq, id->device);
+	si_info(dev, "irup 0x%x irq 0x%x id 0x%x\n",
+		irup, pci->irq, id->device);
 
 	pci_set_master(dev->pci);
 
@@ -224,34 +222,34 @@ static int si_configure_device(struct pci_dev *pci,
 	//  LOCAL_REG_WRITE(dev, LOCAL_COMMAND, (LC_FIFO_MRS_L) );
 
 	//  reg = PLX_REG8_READ(dev, PCI9054_DMA_COMMAND_STAT);
-	//  printk("SI dma cmd stat 0x%x \n", reg );
+	//  si_info(dev, "dma cmd stat 0x%x \n", reg);
 	//if( reg & 1 ) {
 	// si_stop_dma( dev, NULL );
 	// }
 
 	/* turn on interrupts */
 	reg = PLX_REG_READ(dev, PCI9054_INT_CTRL_STAT);
-	//  printk("SI intr stat 0x%x \n", reg );
+	//  si_info(dev, "intr stat 0x%x \n", reg);
 	PLX_REG_WRITE(dev, PCI9054_INT_CTRL_STAT, reg | (1 << 8) | (1 << 11));
 	reg = PLX_REG_READ(dev, PCI9054_INT_CTRL_STAT);
 
-	//  printk("SI LOCAL_ID_NUMBER = 0x%x 0x%x\n",
-	//    LOCAL_REG_READ(dev, LOCAL_ID_NUMBER), reg );
+	//  si_info(dev, "LOCAL_ID_NUMBER = 0x%x 0x%x\n",
+	//    LOCAL_REG_READ(dev, LOCAL_ID_NUMBER), reg);
 
 	//  reg = PLX_REG_READ( dev, PCI9054_INT_CTRL_STAT);
 
 	//  if( reg & ( 1<<7 ) ) {
-	//    printk("SI local bus parity error 0x%x\n", reg );
+	//    si_info(dev, "local bus parity error 0x%x\n", reg);
 	//    PLX_REG_WRITE( dev, PCI9054_INT_CTRL_STAT, reg | (1<<7) );
 	//  }
 	//  reg = PLX_REG_READ( dev, PCI9054_INT_CTRL_STAT );
-	//  printk("SI LOCAL_REV_NUMBER = 0x%x 0x%x\n",
-	//    LOCAL_REG_READ(dev, LOCAL_REV_NUMBER), reg );
+	//  si_info(dev, "LOCAL_REV_NUMBER = 0x%x 0x%x\n",
+	//    LOCAL_REG_READ(dev, LOCAL_REV_NUMBER), reg);
 
 	//  reg = PLX_REG_READ( dev, PCI9054_INT_CTRL_STAT);
 
 	//  reg = PLX_REG_READ(dev, PCI9054_DMA0_MODE );
-	//  printk("SI mode 0x%x\n", reg );
+	//  si_info(dev, "mode 0x%x\n", reg);
 
 	/* assign verbose flag as module parameter */
 
@@ -292,21 +290,21 @@ static int __init si_init_module(void)
 	si_driver.probe = si_configure_device;
 
 	if (alloc_chrdev_region(&si_dev, 0, SI_MAX_CARDS, "si3097") < 0) {
-		printk(KERN_ERR "SI alloc_chrdev_region failed");
+		pr_err("SI alloc_chrdev_region failed\n");
 		return (-1);
 	}
 	if (!(si_class = class_create(THIS_MODULE, "chardrv"))) {
-		printk(KERN_ERR "SI class_create failed");
+		pr_err("SI class_create failed\n");
 		goto out_reg;
 	}
 	cdev_init(&si_cdev, &si_fops);
 	if (cdev_add(&si_cdev, si_dev, SI_MAX_CARDS) < 0) {
-		printk(KERN_ERR "SI cdev_add failed");
+		pr_err("SI cdev_add failed\n");
 		goto out_class;
 	}
 
 	if (!(si_proc = proc_create("si3097", 0, NULL, &si_proc_fops))) {
-		printk(KERN_ERR "SI proc_create failed");
+		pr_err("SI proc_create failed\n");
 		goto out_cdev;
 	}
 
@@ -315,19 +313,19 @@ static int __init si_init_module(void)
 #ifdef NO_HW_TEST
 	si_count = 1;
 	dev = &si_devices[0];
-	printk("SI TEST device configured\n");
+	pr_info("SI TEST device configured\n");
 	memset(dev, 0, sizeof(struct SIDEVICE));
 	dev->test = 1;
 	spin_lock_init(&dev->uart_lock);
 	spin_lock_init(&dev->dma_lock);
 #else
 	if (pci_register_driver(&si_driver) < 0) {
-		printk(KERN_ERR "SI pci_register_driver failed");
+		pr_err("SI pci_register_driver failed\n");
 		goto out_proc;
 	}
 	if (si_count == 0) {
 		pci_unregister_driver(&si_driver);
-		printk("SI no cards found\n");
+		pr_info("SI no cards found\n");
 		goto out_proc;
 	}
 #endif
@@ -390,7 +388,7 @@ int si_open(struct inode *inode, struct file *filp)
 	__u32 int_stat;
 
 	if (minor >= si_count) {
-		printk("SI bad minor number %d in open\n", minor);
+		pr_err("SI bad minor number %d in open\n", minor);
 		return (-EBADF);
 	}
 	dev = &si_devices[minor];
@@ -398,7 +396,7 @@ int si_open(struct inode *inode, struct file *filp)
 	try_module_get(THIS_MODULE);
 
 	if ((op = atomic_read(&dev->isopen))) {
-		printk("SI minor %d already open %d, thats ok\n", op, minor);
+		si_info(dev, "minor %d already open %d, thats ok\n", op, minor);
 	}
 
 	filp->private_data = dev;
@@ -415,7 +413,7 @@ int si_close(struct inode *inode, struct file *filp) /* close */
 	struct SIDEVICE *dev;
 
 	if (minor >= si_count) {
-		printk("SI bad minor number %d in close\n", minor);
+		pr_err("SI bad minor number %d in close\n", minor);
 		return (-EBADF);
 	}
 	dev = &si_devices[minor];
@@ -423,14 +421,15 @@ int si_close(struct inode *inode, struct file *filp) /* close */
 	atomic_dec(&dev->isopen);
 
 	if (atomic_read(&dev->isopen) <= 0) {
-		//    if( si_wait_vmaclose( dev )) {
-		//      printk("SI last close, but vma is still open %d\n", minor );
-		//    }
+		//if (si_wait_vmaclose(dev)) {
+		//	si_err(dev,
+		//	"last close, but vma is still open %d\n", minor);
+		//}
 		si_stop_dma(dev, NULL);
 	}
 
 	if (atomic_read(&dev->isopen) <= 0 && atomic_read(&dev->vmact) != 0) {
-		printk("SI close without vma_close, %d\n",
+		si_err(dev, "close without vma_close, %d\n",
 		       atomic_read(&dev->vmact));
 		atomic_set(&dev->vmact, 0);
 	}
@@ -465,9 +464,8 @@ ssize_t si_read(struct file *filp, char __user *buf, size_t count, loff_t *off)
 
 		while (si_receive_serial(dev, &ch) == FALSE) {
 			if (!blocking) {
-				if (dev->verbose & SI_VERBOSE_SERIAL)
-					printk("SI read, count %d rxcnt %d\n",
-					       i, dev->Uart.rxcnt);
+				si_serial_dbg(dev, "read, count %d rxcnt %d\n",
+				       i, dev->Uart.rxcnt);
 				return i;
 			}
 
@@ -477,9 +475,8 @@ ssize_t si_read(struct file *filp, char __user *buf, size_t count, loff_t *off)
 			if (si_uart_read_ready(dev)) {
 				continue;
 			} else {
-				if (dev->verbose & SI_VERBOSE_SERIAL)
-					printk("SI read, count %d rxcnt %d\n",
-					       i, dev->Uart.rxcnt);
+				si_serial_dbg(dev, "read, count %d rxcnt %d\n",
+				       i, dev->Uart.rxcnt);
 				return i;
 			}
 		}
@@ -488,8 +485,7 @@ ssize_t si_read(struct file *filp, char __user *buf, size_t count, loff_t *off)
 			return -EFAULT;
 	}
 
-	if (dev->verbose & SI_VERBOSE_SERIAL)
-		printk("SI read, count %d rxcnt %d\n", i, dev->Uart.rxcnt);
+	si_serial_dbg(dev, "read, count %d rxcnt %d\n", i, dev->Uart.rxcnt);
 
 	return i;
 }
@@ -507,8 +503,7 @@ ssize_t si_write(struct file *filp, const char __user *buf, size_t count,
 	dev = filp->private_data;
 	blocking = (dev->Uart.block & SI_SERIAL_FLAGS_BLOCK) != 0;
 
-	if (dev->verbose & SI_VERBOSE_SERIAL)
-		printk("SI write, count %lu\n", (unsigned long)count);
+	si_serial_dbg(dev, "write, count %lu\n", (unsigned long)count);
 
 	if (dev->test) {
 		for (i = 0; i < count; i++) { // for all characters
@@ -619,19 +614,19 @@ unsigned int si_poll(struct file *filp, poll_table *table)
 	if (dev->verbose & SI_VERBOSE_SERIAL) {
 		char buf[256];
 		if (dev->setpoll == SI_SETPOLL_UART) {
-			strcpy(buf, "SI poll uart");
+			strcpy(buf, "poll uart");
 			if (rr)
 				strcat(buf, ", rx not empty");
 			else
 				strcat(buf, ", rx empty");
 		} else {
-			strcpy(buf, "SI poll dma");
+			strcpy(buf, "poll dma");
 			if (done)
 				strcat(buf, ", dma ready");
 			else
 				strcat(buf, ", dma not ready");
 		}
-		printk("%s\n", buf);
+		dev_dbg(&dev->pci->dev, "%s\n", buf);
 	}
 	return mask;
 }

@@ -49,7 +49,7 @@ long si_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 		return -EIO;
 
 	//  if( dev->verbose )
-	//    printk("SI ioctl %d\n",  _IOC_SIZE(cmd) );
+	//    si_dbg(dev, "ioctl %d\n",  _IOC_SIZE(cmd));
 
 	/*  Si Interface only */
 
@@ -67,8 +67,7 @@ long si_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 		spin_unlock_irqrestore(&dev->uart_lock, flags);
 
 		ret = put_user(status, (int __user *)args);
-		if (dev->verbose & SI_VERBOSE_SERIAL)
-			printk("SI SI_IOCTL_SERIAL_IN_STATUS %d\n", status);
+		si_serial_dbg(dev, "SI_IOCTL_SERIAL_IN_STATUS %d\n", status);
 	} break;
 
 	case SI_IOCTL_SERIAL_OUT_STATUS: {
@@ -78,8 +77,7 @@ long si_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 		ul = dev->Uart.serialbufsize - dev->Uart.txcnt;
 		spin_unlock_irqrestore(&dev->uart_lock, flags);
 		ret = put_user(ul, (int __user *)args);
-		if (dev->verbose & SI_VERBOSE_SERIAL)
-			printk("SI SI_IOCTL_SERIAL_OUT_STATUS %d\n", ul);
+		si_serial_dbg(dev, "SI_IOCTL_SERIAL_OUT_STATUS %d\n", ul);
 	} break;
 
 	case SI_IOCTL_GET_SERIAL:
@@ -95,9 +93,8 @@ long si_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 				   sizeof(struct SI_SERIAL_PARAM)))
 			return (-EFAULT);
 
-		if (dev->verbose & SI_VERBOSE_SERIAL)
-			printk("SI_IOCTL_SERIAL_PARAMS, baud %d\n",
-			       serial_param.baud);
+		si_serial_dbg(dev, "SI_IOCTL_SERIAL_PARAMS, baud %d\n",
+				serial_param.baud);
 
 		si_set_serial_params(dev, &serial_param);
 		ret = 0;
@@ -117,16 +114,14 @@ long si_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 		if (tim < 0 || tim > 1000)
 			tim = 1000; // limit to 1 second
 
-		if (dev->verbose & SI_VERBOSE_SERIAL)
-			printk("SI_IOCTL_SERIAL_BREAK %d\n", tim);
+		si_serial_dbg(dev, "SI_IOCTL_SERIAL_BREAK %d\n", tim);
 
 		si_uart_break(dev, tim);
 	} break;
 
 	// DMA related entries
 	case SI_IOCTL_DMA_INIT:
-		if (dev->verbose)
-			printk("SI IOCTL_DMA_INIT\n");
+		si_dbg(dev, "SI_IOCTL_DMA_INIT\n");
 
 		if (copy_from_user(&dev->dma_cfg, (struct SI_DMA_CONFIG *)args,
 				   sizeof(struct SI_DMA_CONFIG))) {
@@ -138,8 +133,7 @@ long si_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 		break;
 
 	case SI_IOCTL_DMA_START:
-		if (dev->verbose)
-			printk("SI_IOCTL_DMA_START\n");
+		si_dbg(dev, "SI_IOCTL_DMA_START\n");
 
 		if ((ret = si_start_dma(dev)) < 0)
 			break;
@@ -154,8 +148,7 @@ long si_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 		break;
 
 	case SI_IOCTL_DMA_STATUS:
-		if (dev->verbose)
-			printk("SI_IOCTL_DMA_STATUS\n");
+		si_dbg(dev, "SI_IOCTL_DMA_STATUS\n");
 		if ((ret = si_dma_status(dev, &dma_status)) < 0)
 			break;
 
@@ -165,8 +158,7 @@ long si_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 		break;
 
 	case SI_IOCTL_DMA_NEXT:
-		if (dev->verbose)
-			printk("SI_IOCTL_DMA_NEXT\n");
+		si_dbg(dev, "SI_IOCTL_DMA_NEXT\n");
 
 		ret = si_dma_next(dev, &dma_status);
 		if (copy_to_user((struct SI_DMA_STATUS *)args, &dma_status,
@@ -175,8 +167,7 @@ long si_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 		break;
 
 	case SI_IOCTL_DMA_ABORT:
-		if (dev->verbose)
-			printk("SI_IOCTL_DMA_ABORT\n");
+		si_dbg(dev, "SI_IOCTL_DMA_ABORT\n");
 
 		if ((ret = si_stop_dma(dev, &dma_status)) < 0)
 			break;
@@ -192,21 +183,17 @@ long si_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 
 	case SI_IOCTL_SETPOLL:
 		ret = get_user(dev->setpoll, (int __user *)args);
-		if (dev->verbose) {
-			if (dev->setpoll == SI_SETPOLL_UART)
-				printk("SI setpoll set to uart\n");
-			else
-				printk("SI setpoll set to dma\n");
-		}
+		if (dev->setpoll == SI_SETPOLL_UART)
+			si_dbg(dev, "setpoll set to uart\n");
+		else
+			si_dbg(dev, "setpoll set to dma\n");
 		break;
 
 	case SI_IOCTL_FREEMEM:
-		if (dev->verbose)
-			printk("SI freemem\n");
+		si_dbg(dev, "freemem\n");
 
-		if ((ret = si_wait_vmaclose(
-			     dev))) { /* make sure munmap before free */
-			printk("SI freemem timeout waiting for munmap\n");
+		if ((ret = si_wait_vmaclose(dev))) { /* make sure munmap before free */
+			si_info(dev, "freemem timeout waiting for munmap\n");
 			return ret;
 		}
 
@@ -214,27 +201,24 @@ long si_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 			si_stop_dma(dev, NULL);
 			si_free_sgl(dev);
 		} else {
-			if (dev->verbose)
-				printk("SI freemem no data allocated\n");
+			si_dbg(dev, "freemem no data allocated\n");
 		}
 		break;
 
 	default:
-		printk("Unsupported SI_IOCTL_Xxx (%02d)\n", _IOC_NR(cmd));
+		si_info(dev, "Unsupported SI_IOCTL_Xxx (%02d)\n", _IOC_NR(cmd));
 		ret = -EINVAL;
 		break;
 	}
 
-	//  if( dev->verbose )
-	//    printk("SI completed ioctl %d\n", ret );
+	// si_dbg(dev, "completed ioctl %d\n", ret );
 
 	return ret;
 }
 
 int si_reset(struct SIDEVICE *dev)
 {
-	if (dev->verbose)
-		printk("SI master local reset\n");
+	si_dbg(dev, "master local reset\n");
 	/* do the master reset local bus */
 	LOCAL_REG_WRITE(dev, LOCAL_COMMAND, 0);
 	return 0;

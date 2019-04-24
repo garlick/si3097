@@ -47,8 +47,7 @@ irqreturn_t si_interrupt(int irq, struct SIDEVICE *dev)
 
 	// Read interrupt status register
 	ctrl_stat = PLX_REG_READ(dev, PCI9054_INT_CTRL_STAT);
-	if (dev->verbose)
-		printk("SI interrupt ctrl_stat 0x%x\n", ctrl_stat);
+	si_dbg(dev, "interrupt ctrl_stat 0x%x\n", ctrl_stat);
 
 	/*
       If the chip is in a low power state, then local
@@ -84,14 +83,14 @@ irqreturn_t si_interrupt(int irq, struct SIDEVICE *dev)
 	// Check if Local->PCI Interrupt is active and not masked
 	if ((ctrl_stat & (1 << 15)) && (ctrl_stat & (1 << 11))) {
 		source |= INTR_TYPE_LOCAL_1;
-		//      printk("SI local interrupt\n" );
+		//      si_info(dev, "local interrupt\n");
 	}
 
 	// Check if DMA Channel 0 Interrupt is active and not masked
 	if ((ctrl_stat & (1 << 21)) && (ctrl_stat & (1 << 18))) {
 		// Verify the DMA interrupt is routed to PCI
 		reg = dev->irup_reg = PLX_REG_READ(dev, PCI9054_DMA0_MODE);
-		//      printk("SI DMA0 interrupt, mode 0x%x\n", reg );
+		//      si_info(dev, "DMA0 interrupt, mode 0x%x\n", reg);
 
 		if (reg & (1 << 17)) {
 			source |= INTR_TYPE_DMA_0;
@@ -146,7 +145,7 @@ void si_bottom_half(struct work_struct *work)
 
 	// Copy interrupt source
 	source = dev->source;
-	//  printk("SI bottom half source %d\n", source );
+	//  si_info(dev, "bottom half source %d\n", source);
 
 	// Local Interrupt 1
 	if (source & INTR_TYPE_LOCAL_1) {
@@ -157,7 +156,8 @@ void si_bottom_half(struct work_struct *work)
 		//
 		while (!((iir = UART_REG_READ(dev, SERIAL_IIR)) &
 			 1)) { // more ints?
-			//      printk("SI irup src %d uart reg 0x%x\n", source, iir & 0xe );
+			// si_info(dev, "irup src %d uart reg 0x%x\n",
+			//	source, iir & 0xe);
 
 			switch (iir & 0xe) {
 			case 0x6: // receiver line status interrupt
@@ -172,8 +172,7 @@ void si_bottom_half(struct work_struct *work)
 					c = UART_REG_READ(dev, SERIAL_RX);
 					dev->Uart.rxbuf[dev->Uart.rxput++] = c;
 					dev->Uart.rxcnt++;
-					if (dev->verbose & SI_VERBOSE_SERIAL)
-						printk("SI receive 0x%x rxcnt %d\n",
+					si_serial_dbg(dev, "SI receive 0x%x rxcnt %d\n",
 						       c, dev->Uart.rxcnt);
 					if (dev->Uart.rxput ==
 					    dev->Uart.serialbufsize)
@@ -282,8 +281,9 @@ void si_bottom_half(struct work_struct *work)
 				(LOCAL_REG_READ(dev, LOCAL_PIX_CNT_HH) & 0xff)
 				<< 24;
 			if (!dev->abort_active && rb_count)
-				printk("SI bh DMA0 irup, rb_count not zero %d\n",
-				       rb_count);
+				si_info(dev,
+					"bh DMA0 irup, rb_count not zero %d\n",
+					rb_count);
 			dev->rb_count = rb_count;
 
 		} else {
@@ -291,22 +291,20 @@ void si_bottom_half(struct work_struct *work)
 				       (1 << 3) | (1 << 0));
 		}
 
-		if (dev->verbose)
-			printk("SI bh DMA0 irup, int_stat 0x%x mode 0x%x dma_stat 0x%x\n",
-			       int_stat, dev->irup_reg, reg);
+		si_dbg(dev,
+			"bh DMA0 irup, int_stat 0x%x mode 0x%x dma_stat 0x%x\n",
+			int_stat, dev->irup_reg, reg);
 
 		dev->dma_cur++;
 
 		if (dev->dma_cfg.config & SI_DMA_CONFIG_WAKEUP_EACH) {
 			if (waitqueue_active(&dev->dma_block)) {
-				if (dev->verbose)
-					printk("SI irup wakeup on each\n");
+				si_dbg(dev, "irup wakeup on each\n");
 				wake_up_interruptible(&dev->dma_block);
 			}
 		} else {
 			if (done && waitqueue_active(&dev->dma_block)) {
-				if (dev->verbose)
-					printk("SI irup wakeup on done\n");
+				si_dbg(dev, "irup wakeup on done\n");
 				wake_up_interruptible(&dev->dma_block);
 			}
 		}
@@ -321,7 +319,7 @@ void si_bottom_half(struct work_struct *work)
 		// Clear DMA interrupt
 		PLX_REG8_WRITE(dev, PCI9054_DMA_COMMAND_STAT, reg | (1 << 11));
 		reg = PLX_REG_READ(dev, PCI9054_DMA1_MODE);
-		//    printk("SI DMA1 interrupt, mode 0x%x\n", reg );
+		//    si_info(dev, "DMA1 interrupt, mode 0x%x\n", reg);
 	}
 
 	// Outbound post FIFO interrupt
