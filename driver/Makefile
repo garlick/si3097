@@ -10,3 +10,7 @@ all: modules
 
 modules clean:
 	make -C $(KERNEL_PATH) M=$(shell pwd) $@
+
+check:
+	scripts/checkpatch.pl --no-tree -f \
+		ioctl.c irup.c mmap.c module.c si3097.h si3097_module.h uart.c
