@@ -105,9 +105,11 @@ int si_vmafault(struct vm_fault *vmf)
 	return 0;
 }
 
-static struct vm_operations_struct si_vm_ops = { .open = si_vmaopen,
-						 .close = si_vmaclose,
-						 .fault = si_vmafault };
+static const struct vm_operations_struct si_vm_ops = {
+	.open = si_vmaopen,
+	.close = si_vmaclose,
+	.fault = si_vmafault
+};
 
 int si_mmap(struct file *filp, struct vm_area_struct *vma)
 {

@@ -99,7 +99,7 @@ static int si_open_proc(struct inode *inode, struct file *file)
 
 /* proc file operations */
 
-struct file_operations si_proc_fops = {
+const struct file_operations si_proc_fops = {
 	.owner = THIS_MODULE,
 	.open = si_open_proc,
 	.read = seq_read,
@@ -109,7 +109,7 @@ struct file_operations si_proc_fops = {
 
 /* The different file operations */
 
-struct file_operations si_fops = {
+const struct file_operations si_fops = {
 	.owner = THIS_MODULE, /* owner */
 	.read = si_read, /* read  */
 	.write = si_write, /* write */
