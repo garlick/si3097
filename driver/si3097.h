@@ -1,3 +1,4 @@
+/* SPDX-License-Identifier: GPL-2.0-or-later */
 
 /* Define IOCTL calls for the si3097 Camera Interface Card */
 
