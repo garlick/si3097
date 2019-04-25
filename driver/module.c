@@ -147,12 +147,12 @@ static int si_configure_device(struct pci_dev *pci,
 
 	if (nr == SI_MAX_CARDS) {
 		dev_info(&pci->dev, "ignoring card - max %d\n", SI_MAX_CARDS);
-		return (-EINVAL);
+		return -EINVAL;
 	}
 
 	if (pci_set_dma_mask(pci, 0xffffffff) != 0) {
 		dev_info(&pci->dev, "pci_set_dma_mask failed\n");
-		return (-EIO);
+		return -EIO;
 	}
 
 	/* in case of multiple devices on a SMP machine */
@@ -272,10 +272,10 @@ static int si_configure_device(struct pci_dev *pci,
 	device_create(si_class, NULL, MKDEV(MAJOR(si_dev), nr), NULL,
 		      "sicamera%d", nr);
 
-	return (0);
+	return 0;
 out:
 	si_count--;
-	return (error);
+	return error;
 }
 
 /* the module stuff */
@@ -291,7 +291,7 @@ static int __init si_init_module(void)
 
 	if (alloc_chrdev_region(&si_dev, 0, SI_MAX_CARDS, "si3097") < 0) {
 		pr_err("SI alloc_chrdev_region failed\n");
-		return (-1);
+		return -1;
 	}
 	if (!(si_class = class_create(THIS_MODULE, "chardrv"))) {
 		pr_err("SI class_create failed\n");
@@ -340,7 +340,7 @@ out_class:
 	class_destroy(si_class);
 out_reg:
 	unregister_chrdev_region(si_dev, SI_MAX_CARDS);
-	return (-1);
+	return -1;
 }
 
 static void __exit si_cleanup_module(void)
@@ -389,7 +389,7 @@ int si_open(struct inode *inode, struct file *filp)
 
 	if (minor >= si_count) {
 		pr_err("SI bad minor number %d in open\n", minor);
-		return (-EBADF);
+		return -EBADF;
 	}
 	dev = &si_devices[minor];
 
@@ -414,7 +414,7 @@ int si_close(struct inode *inode, struct file *filp) /* close */
 
 	if (minor >= si_count) {
 		pr_err("SI bad minor number %d in close\n", minor);
-		return (-EBADF);
+		return -EBADF;
 	}
 	dev = &si_devices[minor];
 

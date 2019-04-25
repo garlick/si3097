@@ -91,7 +91,7 @@ long si_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 		if (copy_from_user(&serial_param,
 				   (struct SI_SERIAL_PARAM *)args,
 				   sizeof(struct SI_SERIAL_PARAM)))
-			return (-EFAULT);
+			return -EFAULT;
 
 		si_serial_dbg(dev, "SI_IOCTL_SERIAL_PARAMS, baud %d\n",
 				serial_param.baud);

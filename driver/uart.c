@@ -358,7 +358,7 @@ int si_print_uart_stat(struct SIDEVICE *dev)
 	si_info(dev, "stopbits:      %d\n", dev->Uart.stopbits);
 	si_info(dev, "fifotrigger:   %d\n", dev->Uart.fifotrigger);
 
-	return (0);
+	return 0;
 }
 
 /* send a break to the UART, busy wait delay */
@@ -383,5 +383,5 @@ int si_uart_break(struct SIDEVICE *dev, int break_time)
 	UART_REG_WRITE(dev, SERIAL_LCR, (__u8)(uc & ~0x40));
 	spin_unlock_irqrestore(&dev->uart_lock, flags);
 
-	return (0);
+	return 0;
 }

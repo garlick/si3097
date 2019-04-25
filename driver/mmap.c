@@ -87,12 +87,12 @@ int si_vmafault(struct vm_fault *vmf)
 
 	if (!dev) {
 		pr_err("SI fault failed, dev NULL\n");
-		return (VM_FAULT_SIGBUS);
+		return VM_FAULT_SIGBUS;
 	}
 
 	if (!dev->sgl) {
 		si_err(dev, "fault, sgl NULL\n");
-		return (VM_FAULT_SIGBUS);
+		return VM_FAULT_SIGBUS;
 	}
 
 	spin_lock_irqsave(&dev->nopage_lock, flags);
@@ -107,7 +107,7 @@ int si_vmafault(struct vm_fault *vmf)
 		    "fault, requested more mmap than data: nbuf %d max %d\n",
 		    nbuf, dev->dma_nbuf);
 		spin_unlock_irqrestore(&dev->nopage_lock, flags);
-		return (VM_FAULT_SIGBUS);
+		return VM_FAULT_SIGBUS;
 	}
 
 	vaddr = ((unsigned char *)dev->sgl[nbuf].cpu) + loff;
@@ -116,7 +116,7 @@ int si_vmafault(struct vm_fault *vmf)
 	get_page(vmf->page);
 	spin_unlock_irqrestore(&dev->nopage_lock, flags);
 
-	return (0);
+	return 0;
 }
 
 static struct vm_operations_struct si_vm_ops = { .open = si_vmaopen,
@@ -137,7 +137,7 @@ int si_mmap(struct file *filp, struct vm_area_struct *vma)
 	vma->vm_flags |= (VM_DONTEXPAND | VM_DONTDUMP); /* Don't swap */
 
 	si_vmaopen(vma);
-	return (0);
+	return 0;
 }
 
 /* setup dma channel */
@@ -228,13 +228,13 @@ int si_config_dma(struct SIDEVICE *dev)
 	if (nbuf < 1 || buflen < PAGE_SIZE) {
 		si_info(dev, "si_dma_init nbuf %d buflen %d\n",
 			nbuf, buflen);
-		return (-EIO);
+		return -EIO;
 	}
 
 	if ((unsigned int)(nbuf * buflen) > 0x7fffffff) {
 		si_info(dev, "si_dma_init too big nbuf %d buflen %d\n",
 			nbuf, buflen);
-		return (-EIO);
+		return -EIO;
 	}
 
 	if (buflen != sm_buflen) {
