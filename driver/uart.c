@@ -146,15 +146,15 @@ int si_set_serial_params(struct SIDEVICE *dev, struct SI_SERIAL_PARAM *sp)
 		sp->buffersize += 8192 - (sp->buffersize % 8192);
 
 	spin_unlock_irqrestore(&dev->uart_lock, flags);
-	dev->Uart.rxbuf = (char *)kmalloc(sp->buffersize * 2, GFP_KERNEL);
+	dev->Uart.rxbuf = kmalloc(sp->buffersize * 2, GFP_KERNEL);
 	spin_lock_irqsave(&dev->uart_lock, flags);
 
 	if (dev->Uart.rxbuf == 0) {
 		dev->Uart.rxbuf = cp;
 		sp->buffersize = dev->Uart.serialbufsize;
 	} else {
-		if (cp) /* txbuf is part of rxbuf */
-			kfree(cp);
+		/* txbuf is part of rxbuf */
+		kfree(cp);
 	}
 	dev->Uart.serialbufsize = sp->buffersize;
 	dev->Uart.txbuf = dev->Uart.rxbuf + dev->Uart.serialbufsize;
@@ -231,10 +231,8 @@ void si_cleanup_serial(struct SIDEVICE *dev)
 	UART_REG_WRITE(dev, SERIAL_IER, 0); // disable all ints
 	spin_unlock_irqrestore(&dev->uart_lock, flags);
 	//  txbuf is part of rxbuf
-	if (dev->Uart.rxbuf) {
-		kfree(dev->Uart.rxbuf);
-		dev->Uart.rxbuf = NULL;
-	}
+	kfree(dev->Uart.rxbuf);
+	dev->Uart.rxbuf = NULL;
 
 	/* turn off interrupts */
 
