@@ -83,7 +83,8 @@ int si_vmafault(struct vm_fault *vmf)
 
 	spin_lock_irqsave(&dev->nopage_lock, flags);
 
-	//  off = vmf->virtual_address - vma->vm_start; /* vma->vm_offset byte offset, must be fixed */
+	/* vma->vm_offset byte offset, must be fixed */
+	//  off = vmf->virtual_address - vma->vm_start;
 	off = (vmf->pgoff << PAGE_SHIFT);
 
 	nbuf = off / dev->alloc_sm_buflen;
@@ -337,7 +338,8 @@ int si_alloc_memory(struct SIDEVICE *dev)
 			return -EIO;
 		}
 
-		//   if I am already doing the pci_alloc_consistent, why do I need this
+		// if I am already doing the pci_alloc_consistent,
+		//   why do I need this
 		pend = virt_to_page(cpu + buflen - 1);
 		page = virt_to_page(cpu);
 		while (page <= pend) {

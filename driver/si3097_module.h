@@ -39,14 +39,14 @@ struct SIDEVICE {
 	atomic_t vmact; /* number of vma opens */
 
 	struct work_struct task;
-	struct workqueue_struct *bottom_half_wq; /* Task queue for bottom half */
+	struct workqueue_struct *bottom_half_wq; /* Task queue for bot half */
 
 	wait_queue_head_t dma_block; /* for those who block on DMA */
 	int source; /* interrupt source, passed from irup to bhalf */
 	struct UART Uart; /* structure for uart control */
 	wait_queue_head_t uart_rblock; /* for those who block on reads  */
 	wait_queue_head_t uart_wblock; /* for those who block on writes */
-	wait_queue_head_t mmap_block; /* for re-init of DMA (wait for vmaclose) */
+	wait_queue_head_t mmap_block; /* for re-init of DMA (wait vmaclose) */
 	int verbose; /* print messages when true   */
 
 	struct SIDMA_SGL *sgl; /* array of scatter gather tables */

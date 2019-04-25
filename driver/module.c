@@ -510,9 +510,11 @@ ssize_t si_write(struct file *filp, const char __user *buf, size_t count,
 			if (blocking) {
 				ret = dev->Uart.timeout;
 				wait_event_interruptible_timeout(
-					dev->uart_wblock, si_uart_tx_empty(dev),
-					ret);
-				/* care with wait_event_.., dual use third parameter */
+							dev->uart_wblock,
+							si_uart_tx_empty(dev),
+							ret);
+				// care with wait_event_..,
+				//   dual use third parameter
 				if (ret < 0)
 					return ret;
 				else
