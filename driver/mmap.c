@@ -154,7 +154,7 @@ int si_config_dma(struct SIDEVICE *dev)
 	if (cmd_stat & 1)
 		si_stop_dma(dev, NULL);
 
-	si_dbg(dev, "si_config_dma alloc_maxever %d alloc_buflen %d\n",
+	si_dbg(dev, "%s alloc_maxever %d alloc_buflen %d\n", __func__,
 		       dev->alloc_maxever, dev->alloc_buflen);
 
 	if (dev->alloc_maxever == 0) { /* allocate the memory */
@@ -264,9 +264,9 @@ int si_config_dma(struct SIDEVICE *dev)
 	spin_unlock_irqrestore(&dev->dma_lock, flags);
 
 	si_dbg(dev,
-	"si_config_dma sgl 0x%lx sgl_pci 0x%x buflen %d sm_buflen %d nbuf %d\n",
-	(unsigned long)dev->sgl, (unsigned int)dev->sgl_pci,
-	buflen, sm_buflen, nbuf);
+		"%s sgl 0x%lx sgl_pci 0x%x buflen %d sm_buflen %d nbuf %d\n",
+		__func__, (unsigned long)dev->sgl, (unsigned int)dev->sgl_pci,
+		buflen, sm_buflen, nbuf);
 	if (isalloc)
 		si_print_memtable(dev);
 
@@ -361,7 +361,7 @@ int si_alloc_memory(struct SIDEVICE *dev)
 	}
 	//  spin_unlock_irqrestore( &dev->dma_lock, flags );
 
-	si_dbg(dev, "si_alloc_memory, %d allocates and %d bytes\n",
+	si_dbg(dev, "%s, %d allocates and %d bytes\n", __func__,
 	       dev->total_allocs, dev->total_bytes);
 
 	return 0;
@@ -375,7 +375,7 @@ void si_print_memtable(struct SIDEVICE *dev)
 	if (!dev->sgl)
 		return;
 
-	si_dbg(dev, "si_print_memtable nbuf %d\n", dev->dma_nbuf);
+	si_dbg(dev, "%s nbuf %d\n", __func__, dev->dma_nbuf);
 
 	si_dbg(dev,
 	  "  ch          padr       ladr       siz        dpr        cpu\n");
@@ -667,16 +667,16 @@ int si_wait_vmaclose(struct SIDEVICE *dev)
 
 	tmout = VMACLOSE_TIMEOUT;
 
-	si_info(dev, "si_wait_vmaclose waiting\n");
+	si_info(dev, "%s waiting\n", __func__);
 	wait_event_interruptible_timeout(
 		dev->mmap_block, (atomic_read(&dev->vmact) == 0), tmout);
 
-	si_info(dev, "si_wait_vmaclose wakeup\n");
+	si_info(dev, "%s wakeup\n", __func__);
 	if (atomic_read(&dev->vmact) > 0) {
-		si_dbg(dev, "si_wait_vmaclose timeout\n");
+		si_dbg(dev, "%s timeout\n", __func__);
 		return -EWOULDBLOCK;
 	} else {
-		si_dbg(dev, "si_wait_vmaclose ok\n");
+		si_dbg(dev, "%s ok\n", __func__);
 		return 0;
 	}
 }
