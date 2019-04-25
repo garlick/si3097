@@ -20,8 +20,6 @@
 #include "si3097.h"
 #include "si3097_module.h"
 
-/* si_ioctl:  Processes the IOCTL messages sent to this device */
-
 long si_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 {
 	int ret;

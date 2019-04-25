@@ -63,8 +63,6 @@ static struct cdev si_cdev;
 
 MODULE_DEVICE_TABLE(pci, si_pci_tbl);
 
-/* The proc filesystem: function to read and entry */
-
 static struct proc_dir_entry *si_proc;
 
 int si_show_proc(struct seq_file *seq, void *private)
@@ -95,8 +93,6 @@ static int si_open_proc(struct inode *inode, struct file *file)
 	return single_open(file, si_show_proc, NULL);
 }
 
-/* proc file operations */
-
 const struct file_operations si_proc_fops = {
 	.owner = THIS_MODULE,
 	.open = si_open_proc,
@@ -105,17 +101,15 @@ const struct file_operations si_proc_fops = {
 	.release = single_release,
 };
 
-/* The different file operations */
-
 const struct file_operations si_fops = {
-	.owner = THIS_MODULE, /* owner */
-	.read = si_read, /* read  */
-	.write = si_write, /* write */
-	.poll = si_poll, /* poll */
-	.unlocked_ioctl = si_ioctl, /* ioctl */
-	.mmap = si_mmap, /* mmap */
-	.open = si_open, /* open */
-	.release = si_close, /* release */
+	.owner = THIS_MODULE,
+	.read = si_read,
+	.write = si_write,
+	.poll = si_poll,
+	.unlocked_ioctl = si_ioctl,
+	.mmap = si_mmap,
+	.open = si_open,
+	.release = si_close,
 };
 
 static int si_configure_device(struct pci_dev *pci,
@@ -262,8 +256,6 @@ out:
 	si_count--;
 	return error;
 }
-
-/* the module stuff */
 
 static int __init si_init_module(void)
 {
