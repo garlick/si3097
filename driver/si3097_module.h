@@ -11,12 +11,12 @@ struct UART {
 	int serialbufsize;
 	__u8 *rxbuf;
 	__u8 *txbuf;
-	volatile int rxput;
-	volatile int rxget;
-	volatile int rxcnt;
+	int rxput;
+	int rxget;
+	int rxcnt;
 	int txput;
-	volatile int txget;
-	volatile int txcnt;
+	int txget;
+	int txcnt;
 	int baud;
 	int bits;
 	int parity;
