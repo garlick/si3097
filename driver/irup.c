@@ -107,6 +107,58 @@ irqreturn_t si_interrupt(int irq, struct SIDEVICE *dev)
 	return IRQ_HANDLED;
 }
 
+void transmit_fifo_empty(struct SIDEVICE *dev)
+{
+	int i;
+
+	if (dev->Uart.txcnt < dev->Uart.serialbufsize) { // i is fifo ctr
+		if (dev->Uart.fifotrigger) { // using the FIFO?
+			i = dev->Uart.serialbufsize - dev->Uart.txcnt;
+			if (i > 16)
+				i = 16;
+		} else
+			i = 1; // just get 1 at a time
+		while (i--) { // fill fifo as much as possible
+			UART_REG_WRITE(dev, SERIAL_TX,
+					dev->Uart.txbuf[dev->Uart.txget++]);
+			if (dev->Uart.txget == dev->Uart.serialbufsize)
+				dev->Uart.txget = 0;
+			dev->Uart.txcnt++;
+		}
+		if (dev->Uart.txget == dev->Uart.serialbufsize) /* empty */
+			if (waitqueue_active(&dev->uart_wblock))
+				wake_up_interruptible(&dev->uart_wblock);
+	} else {
+		; // nothing to send - no action needed
+	}
+}
+
+void receive_fifo_timeout(struct SIDEVICE *dev)
+{
+	__u8 c;
+
+	do {
+		c = UART_REG_READ(dev, SERIAL_RX);
+		dev->Uart.rxbuf[dev->Uart.rxput++] = c;
+		dev->Uart.rxcnt++;
+		si_serial_dbg(dev, "receive 0x%x rxcnt %d\n",
+			       c, dev->Uart.rxcnt);
+		if (dev->Uart.rxput == dev->Uart.serialbufsize)
+			dev->Uart.rxput = 0;
+		// Don't let the receive buffer overrun
+		//  itself - newest byte is tossed
+		if (dev->Uart.rxput == dev->Uart.rxget) {
+			dev->Uart.rxput--;
+			dev->Uart.rxcnt--;
+			if (dev->Uart.rxput == -1)
+				dev->Uart.rxput = dev->Uart.serialbufsize - 1;
+		}
+	} while (UART_REG_READ(dev, SERIAL_LSR) & 1); // empty the fifo
+	if (waitqueue_active(&dev->uart_rblock))
+		wake_up_interruptible(&dev->uart_rblock);
+}
+
+
 /* This routine is scheduled by the ISR to efficiently serivce the
  * interrupt
  */
@@ -115,9 +167,9 @@ void si_bottom_half(struct work_struct *work)
 	__u32 int_stat;
 	__u32 reg;
 	__u32 source;
-	__u8 iir, lsr, msr, c;
+	__u8 iir, lsr, msr;
 	struct SIDEVICE *dev;
-	int i, done;
+	int done;
 	unsigned long flags;
 
 	dev = container_of(work, struct SIDEVICE, task);
@@ -141,76 +193,22 @@ void si_bottom_half(struct work_struct *work)
 
 			switch (iir & 0xe) {
 			case 0x6: // receiver line status interrupt
-				lsr = UART_REG_READ(
-					dev,
-					SERIAL_LSR); // clear int, do nothing
+				// clear int, do nothing
+				lsr = UART_REG_READ(dev, SERIAL_LSR);
 				break;
 
 			case 0x4: // receive fifo trigger level reached
 			case 0xc: // receive fifo timeout
-				do {
-					c = UART_REG_READ(dev, SERIAL_RX);
-					dev->Uart.rxbuf[dev->Uart.rxput++] = c;
-					dev->Uart.rxcnt++;
-					si_serial_dbg(dev, "SI receive 0x%x rxcnt %d\n",
-						       c, dev->Uart.rxcnt);
-					if (dev->Uart.rxput ==
-					    dev->Uart.serialbufsize)
-						dev->Uart.rxput = 0;
-					// Don't let the receive buffer overrun itself - newest byte is tossed
-					if (dev->Uart.rxput ==
-					    dev->Uart.rxget) {
-						dev->Uart.rxput--;
-						dev->Uart.rxcnt--;
-						if (dev->Uart.rxput == -1)
-							dev->Uart.rxput =
-								dev->Uart
-									.serialbufsize -
-								1;
-					}
-				} while (UART_REG_READ(dev, SERIAL_LSR) &
-					 1); // empty the fifo
-				if (waitqueue_active(&dev->uart_rblock))
-					wake_up_interruptible(
-						&dev->uart_rblock);
-
+				receive_fifo_timeout(dev);
 				break;
 
 			case 0x2: // transmitter (fifo) empty
-				if (dev->Uart.txcnt <
-				    dev->Uart.serialbufsize) { // i is fifo ctr
-					if (dev->Uart.fifotrigger) { // using the FIFO?
-						i = dev->Uart.serialbufsize -
-						    dev->Uart.txcnt;
-						if (i > 16)
-							i = 16;
-					} else
-						i = 1; // just get 1 at a time
-					while (i--) { // fill fifo as much as possible
-						UART_REG_WRITE(
-							dev, SERIAL_TX,
-							dev->Uart.txbuf
-								[dev->Uart.txget++]);
-						if (dev->Uart.txget ==
-						    dev->Uart.serialbufsize)
-							dev->Uart.txget = 0;
-						dev->Uart.txcnt++;
-					}
-					if (dev->Uart.txget ==
-					    dev->Uart.serialbufsize) /* empty */
-						if (waitqueue_active(
-							    &dev->uart_wblock))
-							wake_up_interruptible(
-								&dev->uart_wblock);
-				} else {
-					; // nothing to send - no action needed
-				}
+				transmit_fifo_empty(dev);
 				break;
 
 			case 0x0: // modem status interrupt
-				msr = UART_REG_READ(
-					dev,
-					SERIAL_MSR); // clear int, do nothing
+				// clear int, do nothing
+				msr = UART_REG_READ(dev, SERIAL_MSR);
 				break;
 			}
 		}
