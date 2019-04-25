@@ -206,7 +206,8 @@ int si_config_dma(struct SIDEVICE *dev)
 	/* nbytes is the number of bytes to xfer in last buffer */
 
 	nbuf = dev->dma_cfg.total / dev->dma_cfg.buflen;
-	if ((nbytes = dev->dma_cfg.total % dev->dma_cfg.buflen))
+	nbytes = dev->dma_cfg.total % dev->dma_cfg.buflen;
+	if (nbytes)
 		nbuf++;
 
 	dev->dma_nbuf = nbuf;
@@ -736,9 +737,10 @@ void *jeff_alloc(int size, dma_addr_t *pphy)
 	int order;
 
 	order = get_order(size);
-	pr_info("order %d\n", order);
-	if (!(km = (unsigned char *)__get_free_pages(GFP_KERNEL, order))) {
-		pr_err("TEST get_free_pages no memory\n");
+	pr_info("SI order %d\n", order);
+	km = (unsigned char *)__get_free_pages(GFP_KERNEL, order);
+	if (!km) {
+		pr_err("SI TEST get_free_pages no memory\n");
 		return NULL;
 	} else {
 		//int i;

@@ -174,7 +174,8 @@ int si_set_serial_params(struct SIDEVICE *dev, struct SI_SERIAL_PARAM *sp)
 	dev->Uart.serialbufsize = sp->buffersize;
 	dev->Uart.txbuf = dev->Uart.rxbuf + dev->Uart.serialbufsize;
 
-	if ((x = dev->Uart.fifotrigger)) {
+	x = dev->Uart.fifotrigger;
+	if (x) {
 		x &= 0x0c;
 		x <<= 4;
 		UART_REG_WRITE(dev, SERIAL_FCR,
@@ -263,7 +264,7 @@ void si_cleanup_serial(struct SIDEVICE *dev)
 
 int si_transmit_serial(struct SIDEVICE *dev, __u8 data)
 {
-	int ret;
+	int ret = FALSE;
 	unsigned long flags;
 	__u8 reg;
 
@@ -275,19 +276,20 @@ int si_transmit_serial(struct SIDEVICE *dev, __u8 data)
 	spin_lock_irqsave(&dev->uart_lock, flags);
 	//  print_UART_stat(dev);
 	reg = 0;
-	if (dev->Uart.txcnt == dev->Uart.serialbufsize &&
-	    ((reg = UART_REG_READ(dev, SERIAL_LSR)) & 0x20)) {
-		UART_REG_WRITE(dev, SERIAL_TX, data);
-		ret = TRUE;
-	} else {
+	if (dev->Uart.txcnt == dev->Uart.serialbufsize) {
+		reg = UART_REG_READ(dev, SERIAL_LSR);
+		if ((reg & 0x20)) {
+			UART_REG_WRITE(dev, SERIAL_TX, data);
+			ret = TRUE;
+		}
+	}
+	if (!ret) {
 		if (dev->Uart.txcnt > 1) { // room in queue?
 			dev->Uart.txbuf[dev->Uart.txput++] = data;
 			if (dev->Uart.txput == dev->Uart.serialbufsize)
 				dev->Uart.txput = 0;
 			dev->Uart.txcnt--;
 			ret = TRUE;
-		} else {
-			ret = FALSE;
 		}
 	}
 	spin_unlock_irqrestore(&dev->uart_lock, flags);

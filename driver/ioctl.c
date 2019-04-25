@@ -108,7 +108,8 @@ long si_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 	case SI_IOCTL_SERIAL_BREAK: {
 		int tim;
 
-		if ((ret = get_user(tim, (int __user *)args)) < 0)
+		ret = get_user(tim, (int __user *)args);
+		if (ret < 0)
 			break;
 
 		if (tim < 0 || tim > 1000)
@@ -135,10 +136,12 @@ long si_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 	case SI_IOCTL_DMA_START:
 		si_dbg(dev, "SI_IOCTL_DMA_START\n");
 
-		if ((ret = si_start_dma(dev)) < 0)
+		ret = si_start_dma(dev);
+		if (ret < 0)
 			break;
 
-		if ((ret = si_dma_status(dev, &dma_status)) < 0)
+		ret = si_dma_status(dev, &dma_status);
+		if (ret < 0)
 			break;
 
 		if (args &&
@@ -149,7 +152,8 @@ long si_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 
 	case SI_IOCTL_DMA_STATUS:
 		si_dbg(dev, "SI_IOCTL_DMA_STATUS\n");
-		if ((ret = si_dma_status(dev, &dma_status)) < 0)
+		ret = si_dma_status(dev, &dma_status);
+		if (ret < 0)
 			break;
 
 		if (copy_to_user((struct SI_DMA_STATUS *)args, &dma_status,
@@ -169,7 +173,8 @@ long si_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 	case SI_IOCTL_DMA_ABORT:
 		si_dbg(dev, "SI_IOCTL_DMA_ABORT\n");
 
-		if ((ret = si_stop_dma(dev, &dma_status)) < 0)
+		ret = si_stop_dma(dev, &dma_status);
+		if (ret < 0)
 			break;
 
 		if (args &&
@@ -192,7 +197,8 @@ long si_ioctl(struct file *filp, unsigned int cmd, unsigned long args)
 	case SI_IOCTL_FREEMEM:
 		si_dbg(dev, "freemem\n");
 
-		if ((ret = si_wait_vmaclose(dev))) { /* make sure munmap before free */
+		ret = si_wait_vmaclose(dev);
+		if (ret) { /* make sure munmap before free */
 			si_info(dev, "freemem timeout waiting for munmap\n");
 			return ret;
 		}

@@ -165,12 +165,14 @@ static int si_configure_device(struct pci_dev *pci,
 
 	spin_unlock(&spin_multi_devs);
 
-	if ((error = pci_enable_device(pci)) < 0)
+	error = pci_enable_device(pci);
+	if (error < 0)
 		goto out;
 
 	dev->pci = pci;
 	pci_read_config_byte(dev->pci, PCI_INTERRUPT_LINE, &irup);
-	if ((error = pci_request_regions(dev->pci, "SI3097")) < 0)
+	error = pci_request_regions(dev->pci, "SI3097");
+	if (error < 0)
 		goto out;
 
 	for (i = 0; i < 4; i++) {
@@ -187,8 +189,9 @@ static int si_configure_device(struct pci_dev *pci,
 	}
 
 	if (pci->irq) {
-		if ((error = request_irq(pci->irq, (void *)si_interrupt,
-					 IRQF_SHARED, "SI", dev))) {
+		error = request_irq(pci->irq, (void *)si_interrupt,
+					 IRQF_SHARED, "SI", dev);
+		if (error) {
 			si_info(dev, "failed to get irq %d error %d\n",
 				pci->irq, error);
 			si_info(dev, "skipping device\n");
@@ -293,7 +296,8 @@ static int __init si_init_module(void)
 		pr_err("SI alloc_chrdev_region failed\n");
 		return -1;
 	}
-	if (!(si_class = class_create(THIS_MODULE, "chardrv"))) {
+	si_class = class_create(THIS_MODULE, "chardrv");
+	if (!si_class) {
 		pr_err("SI class_create failed\n");
 		goto out_reg;
 	}
@@ -303,7 +307,8 @@ static int __init si_init_module(void)
 		goto out_class;
 	}
 
-	if (!(si_proc = proc_create("si3097", 0, NULL, &si_proc_fops))) {
+	si_proc = proc_create("si3097", 0, NULL, &si_proc_fops);
+	if (!si_proc) {
 		pr_err("SI proc_create failed\n");
 		goto out_cdev;
 	}
@@ -395,7 +400,8 @@ int si_open(struct inode *inode, struct file *filp)
 
 	try_module_get(THIS_MODULE);
 
-	if ((op = atomic_read(&dev->isopen))) {
+	op = atomic_read(&dev->isopen);
+	if (op) {
 		si_info(dev, "minor %d already open %d, thats ok\n", op, minor);
 	}
 
