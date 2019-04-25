@@ -677,10 +677,9 @@ int si_wait_vmaclose(struct SIDEVICE *dev)
 	if (atomic_read(&dev->vmact) > 0) {
 		si_dbg(dev, "%s timeout\n", __func__);
 		return -EWOULDBLOCK;
-	} else {
-		si_dbg(dev, "%s ok\n", __func__);
-		return 0;
 	}
+	si_dbg(dev, "%s ok\n", __func__);
+	return 0;
 }
 
 /* return byte count progress */
@@ -731,28 +730,27 @@ void *jeff_alloc(int size, dma_addr_t *pphy)
 	if (!km) {
 		pr_err("SI TEST get_free_pages no memory\n");
 		return NULL;
-	} else {
-		//int i;
-
-		memset(km, 0, size);
-
-		if (pphy)
-			*pphy = (dma_addr_t)virt_to_phys(km);
-
-		//    count = 0;
-
-		//    for( i=0; i<TEST_SIZE; i+=8192 ) {
-		//       phy_ix = (unsigned int)virt_to_phys( km+i );
-		//       if( phy_ix != (phy + i ))
-		//         count++;
-		//    }
-		//    if( count == 0 )
-		//      pr_info("TEST worked count %d\n", count);
-		//    else
-		//      pr_info("TEST failed count %d\n", count);
-		//
-		//    free_pages((unsigned long)km, order);
-
-		return (void *)km;
 	}
+	//int i;
+
+	memset(km, 0, size);
+
+	if (pphy)
+		*pphy = (dma_addr_t)virt_to_phys(km);
+
+	//    count = 0;
+
+	//    for( i=0; i<TEST_SIZE; i+=8192 ) {
+	//       phy_ix = (unsigned int)virt_to_phys( km+i );
+	//       if( phy_ix != (phy + i ))
+	//         count++;
+	//    }
+	//    if( count == 0 )
+	//      pr_info("TEST worked count %d\n", count);
+	//    else
+	//      pr_info("TEST failed count %d\n", count);
+	//
+	//    free_pages((unsigned long)km, order);
+
+	return (void *)km;
 }

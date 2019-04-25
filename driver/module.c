@@ -517,8 +517,7 @@ ssize_t si_write(struct file *filp, const char __user *buf, size_t count,
 				//   dual use third parameter
 				if (ret < 0)
 					return ret;
-				else
-					si_transmit_serial(dev, ch);
+				si_transmit_serial(dev, ch);
 			} else {
 				return -EWOULDBLOCK;
 			}
