@@ -126,6 +126,10 @@ void transmit_fifo_empty(struct SIDEVICE *dev)
 			dev->Uart.txcnt++;
 		}
 		if (dev->Uart.txget == dev->Uart.serialbufsize) /* empty */
+			/* ensure that condition update is not hoisted over
+			 * the waitqueue_active() call during optimization.
+			 */
+			smp_mb();
 			/* wake up writer blocked in si_write()
 			 */
 			if (waitqueue_active(&dev->uart_wblock))
@@ -156,6 +160,10 @@ void receive_fifo_timeout(struct SIDEVICE *dev)
 				dev->Uart.rxput = dev->Uart.serialbufsize - 1;
 		}
 	} while (UART_REG_READ(dev, SERIAL_LSR) & 1); // empty the fifo
+	/* ensure that condition update is not hoisted over
+	 * the waitqueue_active() call during optimization.
+	 */
+	smp_mb();
 	/* Wake up reader blocked in si_read() or si_poll().
 	 */
 	if (waitqueue_active(&dev->uart_rblock))
@@ -280,6 +288,10 @@ void si_bottom_half(struct work_struct *work)
 		dev->dma_cur++;
 
 		if ((dev->dma_cfg.config & SI_DMA_CONFIG_WAKEUP_EACH) || done) {
+			/* ensure that condition update is not hoisted over
+			 * the waitqueue_active() call during optimization.
+			 */
+			smp_mb();
 			/* Wake up callers blocked in si_dma_next(),
 			 * si_stop_dma(), or si_poll().
 			 */
