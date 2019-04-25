@@ -73,7 +73,7 @@ struct SI_SERIAL_PARAM {
 
 //#define IOCTL_MSG( code ) _IOWR( SI_MAGIC, code, IOCTLDATA )
 
-typedef enum _SI_DRIVER_MSGS {
+enum SI_DRIVER_MSGS {
 	MSG_SI_RESET = SI_IOCTL_CODE_BASE,
 	MSG_SI_DMA_INIT,
 	MSG_SI_DMA_START,
@@ -90,7 +90,7 @@ typedef enum _SI_DRIVER_MSGS {
 	MSG_SI_VERBOSE,
 	MSG_SI_SETPOLL,
 	MSG_SI_FREEMEM,
-} SI_DRIVER_MSGS;
+};
 
 // SI interface
 
