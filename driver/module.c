@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+
 /*
-
-Linux Driver for the
-Spectral Instruments 3097 Camera Interface
-
-Copyright (C) 2006  Jeffrey R Hagen
-*/
+ * Linux Driver for the
+ * Spectral Instruments 3097 Camera Interface
+ *
+ * Copyright (C) 2006  Jeffrey R Hagen
+ */
 
 #include <linux/version.h>
 #include <linux/sched.h>
@@ -30,10 +30,9 @@ MODULE_LICENSE("GPL");
 
 /* module parameters */
 
-/*
- if maxever is not zero on module load,
- configure memory based on buflen and maxever
-*/
+/* if maxever is not zero on module load,
+ * configure memory based on buflen and maxever
+ */
 
 int buflen = 1048576;
 module_param(buflen, int, 0);
@@ -244,8 +243,7 @@ static int si_configure_device(struct pci_dev *pci,
 
 	dev->verbose = verbose;
 
-	/* on init, configure memory if module parameter
-   maxever is non zero */
+	/* on init, configure memory if module parameter maxever is non zero */
 
 	if (maxever > 0) {
 		if (buflen > maxever)

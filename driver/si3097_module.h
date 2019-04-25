@@ -1,9 +1,9 @@
 /* SPDX-License-Identifier: GPL-2.0-or-later */
 
 /* This file holds the defines and internal structures
-   for the linux driver for the
-   Spectral Instruments 3097 Interface card
-*/
+ * for the linux driver for the
+ * Spectral Instruments 3097 Interface card
+ */
 
 /* uart control structure */
 
@@ -115,10 +115,10 @@ struct SIDEVICE {
 	iowrite32((value & 0xff), (pdx)->bar[3] + (offset * 4))
 
 /*
-   This INTER_TYPE_* mask is used for the "source" word that
-   is passed to the bottom half of the interrupt service
-   routine to tell what kind of interrupt occured
-*/
+ * This INTER_TYPE_* mask is used for the "source" word that
+ * is passed to the bottom half of the interrupt service
+ * routine to tell what kind of interrupt occured
+ */
 
 #define INTR_TYPE_NONE 0
 #define INTR_TYPE_LOCAL_1 (1 << 0)
@@ -133,9 +133,9 @@ struct SIDEVICE {
 #define INTR_TYPE_SOFTWARE (1 << 9)
 
 /*
-  these macros define the lower four bits
-  of the SIDMA_SGL dpr register
-*/
+ * these macros define the lower four bits
+ * of the SIDMA_SGL dpr register
+ */
 
 #define SIDMA_DPR_PCI_SRC 0x01 /* 1 pci 0 local descriptor */
 #define SIDMA_DPR_EOC 0x02 /* true if end of chain */
@@ -143,13 +143,13 @@ struct SIDEVICE {
 #define SIDMA_DPR_TOPCI 0x08 /* true if direction is toward PCI bus */
 
 /*
-  This is the DMA Scatter Gather list
-  An array of these is allocated and populated
-  for each buffer requested by the DMA_INIT ioctl.
-
-  fill is needed because the dpr register masks the
-  lower 4 bits as address.
-*/
+ * This is the DMA Scatter Gather list
+ * An array of these is allocated and populated
+ * for each buffer requested by the DMA_INIT ioctl.
+ *
+ * fill is needed because the dpr register masks the
+ * lower 4 bits as address.
+ */
 
 struct SIDMA_SGL {
 	__u32 padr; /* DMA channel PCI address */
@@ -161,8 +161,8 @@ struct SIDMA_SGL {
 };
 
 /*
-   Standard PCI Configuration Registers
-*/
+ * Standard PCI Configuration Registers
+ */
 
 #define PCI9054_VENDOR_ID 0x000
 #define PCI9054_COMMAND 0x004
@@ -187,9 +187,9 @@ struct SIDMA_SGL {
 #define PCI9054_VPD_DATA 0x050
 
 /*
-   These registers are mapped via BAR0 and are accessed
-   with the PLX_REG_[READ|WRITE] macros.
-*/
+ * These registers are mapped via BAR0 and are accessed
+ * with the PLX_REG_[READ|WRITE] macros.
+ */
 
 #define PCI9054_SPACE0_RANGE 0x000
 #define PCI9054_SPACE0_REMAP 0x004
@@ -257,10 +257,10 @@ struct SIDMA_SGL {
 #define PCI9054_FIFO_CTRL_STAT 0x0e8
 
 /*
-  These registers are defined by SI and control
-  the DMA fifo.  They are mapped to BAR2 and are acessed
-  with the LOCAL_REG_[READ|WRITE] macros.
-*/
+ * These registers are defined by SI and control
+ * the DMA fifo.  They are mapped to BAR2 and are acessed
+ * with the LOCAL_REG_[READ|WRITE] macros.
+ */
 
 // defines for FIFOBaseRegisterAddress registers
 #define LOCAL_COMMAND 0 // local command register  (R/W)
@@ -297,10 +297,10 @@ struct SIDMA_SGL {
 #define LS_UART_FIFO_FULL 128 // UART transmit done (read only)(PC104 only)
 
 /*
-  These macros refer to registers mapped to
-  BAR3 which control the 16550 UART serial port
-  to the camera.
-*/
+ * These macros refer to registers mapped to
+ * BAR3 which control the 16550 UART serial port
+ * to the camera.
+ */
 
 #define SERIAL_TX 0
 #define SERIAL_RX 0

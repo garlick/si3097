@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+
 /*
-
-Linux Driver for the
-Spectral Instruments 3097 Camera Interface
-
-Copyright (C) 2006  Jeffrey R Hagen
-*/
+ * Linux Driver for the
+ * Spectral Instruments 3097 Camera Interface
+ *
+ * Copyright (C) 2006  Jeffrey R Hagen
+ */
 
 /* define the ioctl calls */
 

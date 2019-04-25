@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+
 /*
-
-Linux Driver for the
-Spectral Instruments 3097 Camera Interface
-
-Copyright (C) 2006  Jeffrey R Hagen
-*/
+ * Linux Driver for the
+ * Spectral Instruments 3097 Camera Interface
+ *
+ * Copyright (C) 2006  Jeffrey R Hagen
+ */
 
 #include <linux/version.h>
 #include <linux/module.h>
@@ -135,8 +135,8 @@ int si_set_serial_params(struct SIDEVICE *dev, struct SI_SERIAL_PARAM *sp)
 	cp = dev->Uart.rxbuf; /* save old pointer just in case */
 
 	/* allocate one large buffer and split it in half.
-     Allocatate new before deallocating old one.
-   */
+	 * Allocatate new before deallocating old one.
+	 */
 
 	si_serial_dbg(dev, "sp->buffersize %d\n", (int)sp->buffersize);
 	if (sp->buffersize <= 0)
@@ -244,8 +244,8 @@ void si_cleanup_serial(struct SIDEVICE *dev)
 }
 
 /* send one character over the serial bus
-   if ready to send, send it, if not, queue
-   and let the isr handle it
+ * if ready to send, send it, if not, queue
+ * and let the isr handle it
  */
 
 int si_transmit_serial(struct SIDEVICE *dev, __u8 data)
@@ -288,11 +288,11 @@ int si_transmit_serial(struct SIDEVICE *dev, __u8 data)
 }
 
 /* read one character from UART
-
-   Remove 1 character from the receive queue, copy
-   it into pdata, and return TRUE. If the queue
-   is empty, return FALSE.
-*/
+ *
+ * Remove 1 character from the receive queue, copy
+ * it into pdata, and return TRUE. If the queue
+ * is empty, return FALSE.
+ */
 
 int si_receive_serial(struct SIDEVICE *dev, __u8 *pdata)
 {

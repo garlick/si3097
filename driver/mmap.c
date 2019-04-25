@@ -1,16 +1,16 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+
 /*
-
-Linux Driver for the
-Spectral Instruments 3097 Camera Interface
-
-Copyright (C) 2006  Jeffrey R Hagen
-*/
+ * Linux Driver for the
+ * Spectral Instruments 3097 Camera Interface
+ *
+ * Copyright (C) 2006  Jeffrey R Hagen
+ */
 
 /* mmap
-   allocate the driver buffers and
-   map it to the application
-*/
+ * allocate the driver buffers and
+ * map it to the application
+ */
 
 #include <linux/version.h>
 #include <linux/module.h>
@@ -129,11 +129,11 @@ int si_mmap(struct file *filp, struct vm_area_struct *vma)
 /* setup dma channel */
 
 /* alloc all the memory for a dma transfer
-   dev->sgl holds an array of scatted gather tables
-   which holds the pointers to the dma.
-   An additional element, cpu is added to hold
-   the kernel side virt address of the hardware address
-*/
+ * dev->sgl holds an array of scatted gather tables
+ * which holds the pointers to the dma.
+ * An additional element, cpu is added to hold
+ * the kernel side virt address of the hardware address
+ */
 
 int si_config_dma(struct SIDEVICE *dev)
 {

@@ -62,7 +62,8 @@ struct SI_SERIAL_PARAM {
 #define SI_SERIAL_FLAGS_BLOCK 0x04 /* read/write block for done */
 
 /* for SI_IOCTL_SETPOLL make poll (or select) wait on dma or the uart
-   but not both */
+ * but not both
+ */
 
 #define SI_SETPOLL_DMA 0
 #define SI_SETPOLL_UART 1

@@ -1,11 +1,11 @@
 // SPDX-License-Identifier: GPL-2.0-or-later
+
 /*
-
-Linux Driver for the
-Spectral Instruments 3097 Camera Interface
-
-Copyright (C) 2006  Jeffrey R Hagen
-*/
+ * Linux Driver for the
+ * Spectral Instruments 3097 Camera Interface
+ *
+ * Copyright (C) 2006  Jeffrey R Hagen
+ */
 
 /* This is the interrupt code for the si3097 */
 
@@ -21,10 +21,8 @@ Copyright (C) 2006  Jeffrey R Hagen
 #include "si3097.h"
 #include "si3097_module.h"
 
-/*
-  The Interrupt Service Routine for the PLX chip on the SI camera controller
+/* The Interrupt Service Routine for the PLX chip on the SI camera controller
  */
-
 irqreturn_t si_interrupt(int irq, struct SIDEVICE *dev)
 {
 	__u32 reg;
@@ -36,13 +34,13 @@ irqreturn_t si_interrupt(int irq, struct SIDEVICE *dev)
 	si_dbg(dev, "interrupt ctrl_stat 0x%x\n", ctrl_stat);
 
 	/*
-      If the chip is in a low power state, then local
-      register reads are disabled and will always return
-      0xFFFFFFFF.  If the PLX chip's interrupt is shared
-      with another PCI device, the PXL ISR may continue
-      to be called.  This case is handled to avoid
-      erroneous reporting of an active interrupt.
-     */
+	 * If the chip is in a low power state, then local
+	 * register reads are disabled and will always return
+	 * 0xFFFFFFFF.  If the PLX chip's interrupt is shared
+	 * with another PCI device, the PXL ISR may continue
+	 * to be called.  This case is handled to avoid
+	 * erroneous reporting of an active interrupt.
+	 */
 
 	if (ctrl_stat == 0xFFFFFFFF)
 		return IRQ_HANDLED;
@@ -114,8 +112,8 @@ irqreturn_t si_interrupt(int irq, struct SIDEVICE *dev)
 }
 
 /* This routine is scheduled by the ISR to efficiently serivce the
-   interrupt  */
-
+ * interrupt
+ */
 void si_bottom_half(struct work_struct *work)
 {
 	__u32 int_stat;
