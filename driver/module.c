@@ -385,9 +385,8 @@ int si_open(struct inode *inode, struct file *filp)
 	try_module_get(THIS_MODULE);
 
 	op = atomic_read(&dev->isopen);
-	if (op) {
+	if (op)
 		si_info(dev, "minor %d already open %d, thats ok\n", op, minor);
-	}
 
 	filp->private_data = dev;
 	atomic_inc(&dev->isopen);

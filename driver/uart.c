@@ -142,9 +142,8 @@ int si_set_serial_params(struct SIDEVICE *dev, struct SI_SERIAL_PARAM *sp)
 	if (sp->buffersize <= 0)
 		sp->buffersize = 8192;
 
-	if (sp->buffersize % 8192) {
+	if (sp->buffersize % 8192)
 		sp->buffersize += 8192 - (sp->buffersize % 8192);
-	}
 
 	spin_unlock_irqrestore(&dev->uart_lock, flags);
 	dev->Uart.rxbuf = (char *)kmalloc(sp->buffersize * 2, GFP_KERNEL);

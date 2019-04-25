@@ -55,14 +55,12 @@ irqreturn_t si_interrupt(int irq, struct SIDEVICE *dev)
 	source = INTR_TYPE_NONE;
 
 	// Check if PCI Doorbell Interrupt is active and not masked
-	if ((ctrl_stat & (1 << 13)) && (ctrl_stat & (1 << 9))) {
+	if ((ctrl_stat & (1 << 13)) && (ctrl_stat & (1 << 9)))
 		source |= INTR_TYPE_DOORBELL;
-	}
 
 	// Check if PCI Abort Interrupt is active and not masked
-	if ((ctrl_stat & (1 << 14)) && (ctrl_stat & (1 << 10))) {
+	if ((ctrl_stat & (1 << 14)) && (ctrl_stat & (1 << 10)))
 		source |= INTR_TYPE_PCI_ABORT;
-	}
 
 	// Check if Local->PCI Interrupt is active and not masked
 	if ((ctrl_stat & (1 << 15)) && (ctrl_stat & (1 << 11))) {
@@ -76,9 +74,8 @@ irqreturn_t si_interrupt(int irq, struct SIDEVICE *dev)
 		reg = dev->irup_reg = PLX_REG_READ(dev, PCI9054_DMA0_MODE);
 		//      si_info(dev, "DMA0 interrupt, mode 0x%x\n", reg);
 
-		if (reg & (1 << 17)) {
+		if (reg & (1 << 17))
 			source |= INTR_TYPE_DMA_0;
-		}
 	}
 
 	// Check if DMA Channel 1 Interrupt is active and not masked
@@ -86,9 +83,8 @@ irqreturn_t si_interrupt(int irq, struct SIDEVICE *dev)
 		// Verify the DMA interrupt is routed to PCI
 		reg = PLX_REG_READ(dev, PCI9054_DMA1_MODE);
 
-		if (reg & (1 << 17)) {
+		if (reg & (1 << 17))
 			source |= INTR_TYPE_DMA_1;
-		}
 	}
 
 	// Return if no interrupts are active

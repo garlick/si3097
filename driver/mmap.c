@@ -696,11 +696,10 @@ int si_dma_progress(struct SIDEVICE *dev)
 	for (nb = 0; nb < nchains; nb++) {
 		ch = &dev->sgl[nb]; /* kernel virt address of this SGL */
 		prog += ch->siz;
-		if (ch->padr == pci) {
+		if (ch->padr == pci)
 			break;
-		}
-		// si_info(dev,
-		//	"pci 0x%x prog %d %d\n", ch->padr, prog, ch->siz);
+		// si_info(dev, "pci 0x%x prog %d %d\n",
+		//	ch->padr, prog, ch->siz);
 	}
 
 	/* this can happen if its already done */
