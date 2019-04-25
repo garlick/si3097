@@ -210,14 +210,14 @@ static int si_configure_device(struct pci_dev *pci,
 	//  LOCAL_REG_WRITE(dev, LOCAL_COMMAND, (LC_FIFO_MRS_L) );
 
 	//  reg = PLX_REG8_READ(dev, PCI9054_DMA_COMMAND_STAT);
-	//  si_info(dev, "dma cmd stat 0x%x \n", reg);
+	//  si_info(dev, "dma cmd stat 0x%x\n", reg);
 	//if( reg & 1 ) {
 	// si_stop_dma( dev, NULL );
 	// }
 
 	/* turn on interrupts */
 	reg = PLX_REG_READ(dev, PCI9054_INT_CTRL_STAT);
-	//  si_info(dev, "intr stat 0x%x \n", reg);
+	//  si_info(dev, "intr stat 0x%x\n", reg);
 	PLX_REG_WRITE(dev, PCI9054_INT_CTRL_STAT, reg | (1 << 8) | (1 << 11));
 	reg = PLX_REG_READ(dev, PCI9054_INT_CTRL_STAT);
 
