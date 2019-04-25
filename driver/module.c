@@ -603,6 +603,7 @@ unsigned int si_poll(struct file *filp, poll_table *table)
 
 	if (dev->verbose & SI_VERBOSE_SERIAL) {
 		char buf[256];
+
 		if (dev->setpoll == SI_SETPOLL_UART) {
 			strcpy(buf, "poll uart");
 			if (rr)
