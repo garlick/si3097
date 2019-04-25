@@ -43,12 +43,12 @@ module_param(maxever, int, 0);
 int timeout = 5000; /* default jiffies */
 module_param(timeout, int, 0);
 
-int verbose = 0;
+int verbose;
 module_param(verbose, int, 0);
 
 #define SI_MAX_CARDS 3
 static struct SIDEVICE si_devices[SI_MAX_CARDS];
-static int si_count = 0;
+static int si_count;
 
 static struct pci_device_id si_pci_tbl[] __initdata = {
 	{ 0x10b5, 0x2679, PCI_ANY_ID, PCI_ANY_ID, 0, 0, 0 },
