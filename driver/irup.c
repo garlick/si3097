@@ -126,6 +126,8 @@ void transmit_fifo_empty(struct SIDEVICE *dev)
 			dev->Uart.txcnt++;
 		}
 		if (dev->Uart.txget == dev->Uart.serialbufsize) /* empty */
+			/* wake up writer blocked in si_write()
+			 */
 			if (waitqueue_active(&dev->uart_wblock))
 				wake_up_interruptible(&dev->uart_wblock);
 	} else {
@@ -154,6 +156,8 @@ void receive_fifo_timeout(struct SIDEVICE *dev)
 				dev->Uart.rxput = dev->Uart.serialbufsize - 1;
 		}
 	} while (UART_REG_READ(dev, SERIAL_LSR) & 1); // empty the fifo
+	/* Wake up reader blocked in si_read() or si_poll().
+	 */
 	if (waitqueue_active(&dev->uart_rblock))
 		wake_up_interruptible(&dev->uart_rblock);
 }
@@ -275,14 +279,13 @@ void si_bottom_half(struct work_struct *work)
 
 		dev->dma_cur++;
 
-		if (dev->dma_cfg.config & SI_DMA_CONFIG_WAKEUP_EACH) {
+		if ((dev->dma_cfg.config & SI_DMA_CONFIG_WAKEUP_EACH) || done) {
+			/* Wake up callers blocked in si_dma_next(),
+			 * si_stop_dma(), or si_poll().
+			 */
 			if (waitqueue_active(&dev->dma_block)) {
-				si_dbg(dev, "irup wakeup on each\n");
-				wake_up_interruptible(&dev->dma_block);
-			}
-		} else {
-			if (done && waitqueue_active(&dev->dma_block)) {
-				si_dbg(dev, "irup wakeup on done\n");
+				si_dbg(dev, "irup wakeup on %s\n",
+					done ? "done" : "each");
 				wake_up_interruptible(&dev->dma_block);
 			}
 		}
