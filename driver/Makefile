@@ -14,5 +14,5 @@ modules clean:
 	make -C $(KERNEL_PATH) M=$(shell pwd) $@
 
 check:
-	scripts/checkpatch.pl --no-tree -f \
+	scripts/checkpatch.pl --no-tree -f --ignore=LINUX_VERSION_CODE \
 		ioctl.c irup.c mmap.c module.c si3097.h si3097_module.h uart.c
