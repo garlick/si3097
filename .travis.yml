@@ -11,7 +11,9 @@ addons:
     packages:
       - libelf-dev
       - linux-headers-3.13.0-100-generic
+      - libgtk2.0-dev
 
 script:
  - make -C driver check
  - KERNEL_VERSION=3.13.0-100-generic make -C driver
+ - make -C apps
