@@ -1,0 +1,15 @@
+language: c
+
+sudo: false
+
+compiler:
+  - gcc
+
+addons:
+  apt:
+    sources:
+    packages:
+      - libelf-dev
+
+script:
+ - make -C driver check
